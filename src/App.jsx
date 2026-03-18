@@ -4,9 +4,34 @@ import { loadRoom, saveRoom } from './supabase.js'
 const PALETTE = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6FC8','#FFA94D','#84DCC6','#E4C1F9']
 
 const TRAITS = [
-  '熱情','冷靜','幽默','細心','創意','勇敢','善良','直率',
-  '溫柔','有活力','邏輯強','有同理心','愛冒險','踏實','開朗','包容','好奇心強','溫暖',
+  '誠實','路不拾遺','忠誠','正直','真實','有信用','守諾言','專一','專心','可靠',
+  '內心沒詭詐','誠懇','坦白','無隱藏','誠信','信實','率直','表裡一致','好真實','好raw',
+  '承托','承擔','顧家','愛家','犧牲','擺上','無私','認真','負責','盡責',
+  '責任感','全心全意','全力以赴','竭力','專注','堅持不放棄','忍耐','吃苦耐勞','有毅力','有韌性',
+  '勤勞','穩重','成熟','EQ高','情緒穩定','沉靜','內斂','踏實','細心','細緻',
+  '心思細密','謹慎','貼心','能守秘密','節制','有界線','合乎中道','不亢不卑','守規矩','有分寸',
+  '守原則','守時','有要求','有層次','有條理','有節奏','擇善固執','精準','敏銳','明辨',
+  '精明','聰明','聰穎','醒目','機靈','有智慧','敏捷','機警','靈巧','隨機應變',
+  '顧惜','同情心','同理心','體貼','包容','重關係','助人','敞開','愛心','隨和',
+  '讓人舒服','和藹','和諧','和睦','寓心','能屈能伸','有恩典','饒恕','仁愛','和平',
+  '慈愛','有愛','善良','憐憫','接納','接待','安全感','不記仇','心胸廣闊','親和力',
+  '體恤','安慰','愛人如己','視如己出','大方','自信','開朗','健談','活潑好動','精力旺盛',
+  '瀟灑','不拘小節','衝勁','領導力','大膽','有膽識','勇於嘗試','有冒險精神','爽朗','熱情',
+  '勇敢','不怕衝突','熱心','感性','火熱','有主見','突破','有組織能力','分析力','有判斷力',
+  '能引導人','果斷','遠見','有理想','有抱負','有眼光','有深度','會讚美人','懂欣賞人','造就人',
+  '合群','團隊精神','有溫度','對人有感覺','可愛','喜樂','幽默','風趣','魅力','搞笑',
+  '有創意','會玩','創新','表演慾','好奇','樂天','藝術觸覺','有美感','有氣質','有內涵',
+  '有審美眼光','端莊','優雅','有品味','懂得享受','有色彩','浪漫','氣派','自在','怡然自得',
+  '通達','瀟灑自在','斯文','處之泰然','文質彬彬','懂得放鬆','隨心而發','不疾不徐','紳士','美麗',
+  '青春','童真','逆齡','凍齡','不老','柔軟','快回應','受教','信服','好學',
+  '清心','單純','天真爛漫','孝順','溫柔','有Heart','思想積極正面','豐富','謙卑','情義',
+  '正義感','公義','公平','公正','整合','表達','主動','有信心','獨立','健康',
+  '無框框','有彈性','渴慕','敬畏神','尊榮','對靈魂熱切','靈性','像耶穌','不吝嗇','忠心',
+  '慷慨','願意分享','不計較','爽快','豪爽','樂於助人',
 ]
+
+const MIN_TRAITS = 5
+const MAX_TRAITS = 5
 
 function shuffle(arr) {
   const a = [...arr]
@@ -33,7 +58,6 @@ function generateCode() {
   return Math.random().toString(36).substring(2, 7).toUpperCase()
 }
 
-// ── CSS ────────────────────────────────────────────────────────────────────
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -89,6 +113,10 @@ const CSS = `
   .status-done { background: #e8f5e8; color: #2d8a2d; border: 1px solid #b8deb8; }
   .status-wait { background: #f9f6f1; color: #bfb09e; border: 1px solid #e8e0d0; }
 
+  .trait-counter { display: flex; gap: 6px; justify-content: center; margin-bottom: 1rem; }
+  .trait-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #d6c9b3; background: #f9f6f1; transition: all 0.2s; }
+  .trait-dot.filled { background: #2a1f0f; border-color: #2a1f0f; }
+
   @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
   @keyframes revealPop { 0% { transform: scale(0.88); opacity: 0; } 70% { transform: scale(1.04); } 100% { transform: scale(1); opacity: 1; } }
@@ -105,7 +133,6 @@ function Spinner() {
   )
 }
 
-// ── Home ──────────────────────────────────────────────────────────────────
 function Home({ onMode }) {
   return (
     <div className="screen center">
@@ -113,7 +140,7 @@ function Home({ onMode }) {
         <div style={{ textAlign:'center', marginBottom:'2.5rem' }}>
           <div style={{ fontSize:'3rem', marginBottom:'0.75rem' }}>🎭</div>
           <h1 className="serif" style={{ fontSize:'2.5rem', color:'#2a1f0f', lineHeight:1.1, marginBottom:'0.5rem' }}>破冰猜謎</h1>
-          <p className="muted" style={{ lineHeight:1.7, maxWidth:300, margin:'0 auto' }}>每人抽到一位夥伴，寫下特質，大家猜猜看描述的是誰</p>
+          <p className="muted" style={{ lineHeight:1.7, maxWidth:300, margin:'0 auto' }}>每人抽到一位夥伴，寫下 5 個特質，大家猜猜看描述的是誰</p>
           <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', justifyContent:'center', marginTop:'1rem' }}>
             {['① 建立房間','② 私下抽籤','③ 填寫特質','④ 猜猜是誰'].map(s => (
               <span key={s} className="badge">{s}</span>
@@ -133,7 +160,6 @@ function Home({ onMode }) {
   )
 }
 
-// ── Host Setup ────────────────────────────────────────────────────────────
 function HostSetup({ onCreated, onBack }) {
   const [input, setInput] = useState('')
   const [names, setNames] = useState([])
@@ -203,7 +229,6 @@ function HostSetup({ onCreated, onBack }) {
   )
 }
 
-// ── Host Dashboard ─────────────────────────────────────────────────────────
 function HostDashboard({ code, initialRoom, onReveal }) {
   const [room, setRoom] = useState(initialRoom)
 
@@ -234,13 +259,11 @@ function HostDashboard({ code, initialRoom, onReveal }) {
           <span className="badge">主辦人控制台</span>
           <h2 className="serif" style={{ fontSize:'1.8rem', color:'#2a1f0f', marginTop:'0.6rem' }}>房間狀態</h2>
         </div>
-
         <div className="room-box" style={{ marginBottom:'1.5rem' }}>
           <p style={{ color:'#c8b89a', fontSize:'0.75rem', fontFamily:'DM Mono, monospace', letterSpacing:'0.2em', marginBottom:'0.4rem' }}>ROOM CODE</p>
           <div className="room-code">{code}</div>
           <p style={{ color:'#8c7355', fontSize:'0.8rem', marginTop:'0.6rem' }}>與會者打開網站，輸入此代碼加入</p>
         </div>
-
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'1.5rem' }}>
           {[{ label:'已抽籤', val:drawn, total:room.names.length }, { label:'已填特質', val:filled, total:room.names.length }].map(({ label, val, total }) => (
             <div key={label} className="card" style={{ textAlign:'center' }}>
@@ -249,7 +272,6 @@ function HostDashboard({ code, initialRoom, onReveal }) {
             </div>
           ))}
         </div>
-
         <div className="card" style={{ marginBottom:'1.5rem' }}>
           <p style={{ fontWeight:600, color:'#2a1f0f', marginBottom:'1rem' }}>參與者狀態</p>
           <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
@@ -263,7 +285,6 @@ function HostDashboard({ code, initialRoom, onReveal }) {
             ))}
           </div>
         </div>
-
         <button className="btn btn-dark btn-full" disabled={!allDone} onClick={startReveal}>
           {allDone ? '開始猜謎 →' : `等待所有人填寫（${filled}/${room.names.length}）`}
         </button>
@@ -273,7 +294,6 @@ function HostDashboard({ code, initialRoom, onReveal }) {
   )
 }
 
-// ── Guest Join ────────────────────────────────────────────────────────────
 function GuestJoin({ onJoined, onBack }) {
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
@@ -327,7 +347,6 @@ function GuestJoin({ onJoined, onBack }) {
   )
 }
 
-// ── Guest Draw ────────────────────────────────────────────────────────────
 function GuestDraw({ code, myName, room, onDone }) {
   const target = room.assignment[myName]
   const alreadyDrawn = room.drawnSet?.includes(myName)
@@ -408,7 +427,6 @@ function GuestDraw({ code, myName, room, onDone }) {
   )
 }
 
-// ── Guest Traits ──────────────────────────────────────────────────────────
 function GuestTraits({ code, myName, room, onDone }) {
   const alreadyFilled = !!room.traitsMap?.[myName]
   const [selected, setSelected] = useState(alreadyFilled ? room.traitsMap[myName] : [])
@@ -416,15 +434,15 @@ function GuestTraits({ code, myName, room, onDone }) {
   const [saved, setSaved] = useState(alreadyFilled)
   const [saving, setSaving] = useState(false)
 
-  const toggle = t => setSelected(p => p.includes(t) ? p.filter(x => x !== t) : p.length < 5 ? [...p, t] : p)
+  const toggle = t => setSelected(p => p.includes(t) ? p.filter(x => x !== t) : p.length < MAX_TRAITS ? [...p, t] : p)
   const addCustom = () => {
     const t = custom.trim()
-    if (!t || selected.includes(t) || selected.length >= 5) return
+    if (!t || selected.includes(t) || selected.length >= MAX_TRAITS) return
     setSelected(p => [...p, t]); setCustom('')
   }
 
   const submit = async () => {
-    if (selected.length < 3) return
+    if (selected.length < MIN_TRAITS) return
     setSaving(true)
     const latest = await loadRoom(code)
     const updated = { ...latest, traitsMap: { ...latest.traitsMap, [myName]: selected } }
@@ -455,14 +473,19 @@ function GuestTraits({ code, myName, room, onDone }) {
         <div style={{ marginBottom:'1.5rem' }}>
           <span className="badge">③ 填寫特質</span>
           <h2 className="serif" style={{ fontSize:'1.8rem', color:'#2a1f0f', marginTop:'0.6rem' }}>描述你的對象</h2>
-          <p className="muted" style={{ marginTop:'0.4rem' }}>選擇 3–5 個特質（不會顯示你的名字）</p>
+          <p className="muted" style={{ marginTop:'0.4rem' }}>請選擇剛好 5 個特質（不會顯示你的名字）</p>
         </div>
         <div className="card">
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem' }}>
-            <p style={{ fontWeight:600, color:'#2a1f0f' }}>已選 {selected.length}/5 個</p>
-            <span style={{ fontFamily:'DM Mono, monospace', fontSize:'0.8rem', color: selected.length >= 3 ? '#2d8a2d' : '#bfb09e' }}>
-              {selected.length >= 3 ? '✓ 可以送出' : `還需 ${3 - selected.length} 個`}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.75rem' }}>
+            <p style={{ fontWeight:600, color:'#2a1f0f' }}>已選 {selected.length} / {MAX_TRAITS} 個</p>
+            <span style={{ fontFamily:'DM Mono, monospace', fontSize:'0.8rem', color: selected.length === MAX_TRAITS ? '#2d8a2d' : '#bfb09e' }}>
+              {selected.length === MAX_TRAITS ? '✓ 可以送出' : `還需 ${MAX_TRAITS - selected.length} 個`}
             </span>
+          </div>
+          <div className="trait-counter">
+            {Array.from({ length: MAX_TRAITS }).map((_, i) => (
+              <div key={i} className={`trait-dot${i < selected.length ? ' filled' : ''}`} />
+            ))}
           </div>
           {selected.length > 0 && (
             <div style={{ display:'flex', flexWrap:'wrap', gap:'7px', background:'#f9f6f1', borderRadius:'12px', padding:'12px', marginBottom:'1rem' }}>
@@ -479,7 +502,7 @@ function GuestTraits({ code, myName, room, onDone }) {
           <div style={{ display:'flex', flexWrap:'wrap', gap:'7px', marginBottom:'1rem' }}>
             {TRAITS.map(t => (
               <button key={t} className={`trait-chip${selected.includes(t) ? ' on' : ''}`}
-                onClick={() => toggle(t)} disabled={selected.length >= 5 && !selected.includes(t)}>
+                onClick={() => toggle(t)} disabled={selected.length >= MAX_TRAITS && !selected.includes(t)}>
                 {t}
               </button>
             ))}
@@ -488,11 +511,11 @@ function GuestTraits({ code, myName, room, onDone }) {
             <input className="inp" placeholder="自訂特質…" value={custom}
               onChange={e => setCustom(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addCustom()}
-              disabled={selected.length >= 5} />
-            <button className="btn btn-outline" onClick={addCustom} disabled={!custom.trim() || selected.length >= 5}>加入</button>
+              disabled={selected.length >= MAX_TRAITS} />
+            <button className="btn btn-outline" onClick={addCustom} disabled={!custom.trim() || selected.length >= MAX_TRAITS}>加入</button>
           </div>
-          <button className="btn btn-dark btn-full" disabled={selected.length < 3 || saving} onClick={submit}>
-            {saving ? '送出中…' : '送出答案 ✓'}
+          <button className="btn btn-dark btn-full" disabled={selected.length < MIN_TRAITS || saving} onClick={submit}>
+            {saving ? '送出中…' : selected.length === MAX_TRAITS ? '送出答案 ✓' : `還需選 ${MIN_TRAITS - selected.length} 個`}
           </button>
         </div>
       </div>
@@ -500,7 +523,6 @@ function GuestTraits({ code, myName, room, onDone }) {
   )
 }
 
-// ── Guest Waiting ─────────────────────────────────────────────────────────
 function GuestWaiting({ code }) {
   const [started, setStarted] = useState(false)
   useEffect(() => {
@@ -534,7 +556,6 @@ function GuestWaiting({ code }) {
   )
 }
 
-// ── Host Reveal ───────────────────────────────────────────────────────────
 function HostReveal({ room, onReset }) {
   const entries = Object.entries(room.traitsMap)
   const [idx, setIdx] = useState(0)
@@ -627,7 +648,6 @@ function HostReveal({ room, onReset }) {
   )
 }
 
-// ── App ───────────────────────────────────────────────────────────────────
 export default function App() {
   const [mode, setMode] = useState(null)
   const [roomCode, setRoomCode] = useState(null)
@@ -642,7 +662,6 @@ export default function App() {
     <>
       <style>{CSS}</style>
       {!mode && <Home onMode={m => setMode(m)} />}
-
       {mode === 'host' && hostStep === 'setup' && (
         <HostSetup onBack={reset} onCreated={(c, r) => { setRoomCode(c); setRoom(r); setHostStep('dashboard') }} />
       )}
@@ -652,7 +671,6 @@ export default function App() {
       {mode === 'host' && hostStep === 'reveal' && (
         <HostReveal room={room} onReset={reset} />
       )}
-
       {mode === 'guest' && !roomCode && (
         <GuestJoin onBack={reset} onJoined={(c, n, r) => { setRoomCode(c); setMyName(n); setRoom(r) }} />
       )}
