@@ -23,7 +23,6 @@ body {
 
 h1 { font-size: clamp(24px,6vw,40px); font-weight: 900; text-align: center; }
 .sub { font-size: 15px; color: var(--muted); text-align: center; }
-
 .card { width:100%; background:var(--card); border-radius:20px; padding:28px 24px; }
 
 input[type=text] {
@@ -41,7 +40,6 @@ input[type=text]:focus { border-color: var(--gold); }
 .btn:active { transform:scale(.97); }
 .btn-primary { background:var(--accent); color:#fff; box-shadow:0 6px 20px rgba(233,69,96,.4); }
 .btn-primary:hover { filter:brightness(1.1); }
-.btn-ghost { background:rgba(255,255,255,.1); color:#fff; font-size:15px; padding:12px; }
 
 /* room code */
 .room-code { font-size: clamp(36px,10vw,56px); font-weight:900; color:var(--gold); letter-spacing:8px; text-align:center; }
@@ -54,17 +52,16 @@ input[type=text]:focus { border-color: var(--gold); }
 /* top bar */
 .top-bar {
   width:100%; display:flex; align-items:center; justify-content:space-between;
-  background:var(--card); border-radius:14px; padding:10px 16px;
+  background:var(--card); border-radius:14px; padding:12px 18px;
 }
 .q-num { font-size:17px; font-weight:800; }
-.score-chip { background:var(--gold); color:#111; border-radius:99px; padding:4px 16px; font-weight:900; font-size:15px; }
+.score-chip { background:var(--gold); color:#111; border-radius:99px; padding:6px 18px; font-weight:900; font-size:15px; }
 
-/* timer */
-.timer-wrap { position:relative; width:56px; height:56px; }
-.timer-wrap svg { position:absolute; top:0; left:0; transform:rotate(-90deg); }
-.t-track { fill:none; stroke:#333; stroke-width:5; }
-.t-ring  { fill:none; stroke:var(--gold); stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 1s linear, stroke .3s; }
-.t-txt { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:900; }
+/* answered count badge */
+.ans-chip {
+  background: rgba(255,255,255,0.1); border-radius:99px;
+  padding:6px 14px; font-size:13px; color:var(--muted); font-weight:600;
+}
 
 /* progress */
 .prog { width:100%; height:5px; background:rgba(255,255,255,.1); border-radius:99px; overflow:hidden; }
@@ -96,6 +93,13 @@ input[type=text]:focus { border-color: var(--gold); }
 .opt.wrong   { outline:3px solid #e74c3c; opacity:.5; }
 .opt.dim     { opacity:.3; }
 @keyframes pcorrect { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+
+/* answered state */
+.answered-msg {
+  width:100%; background:var(--card); border-radius:14px; padding:18px;
+  text-align:center; font-size:16px; color:var(--muted);
+}
+.answered-msg .big { font-size:40px; margin-bottom:8px; }
 
 /* reveal */
 .reveal-emoji { font-size:56px; text-align:center; }
@@ -170,18 +174,17 @@ input[type=text]:focus { border-color: var(--gold); }
 <div id="s-quiz" class="screen">
   <div class="top-bar">
     <div class="q-num" id="q-num">1 / 6</div>
-    <div class="timer-wrap">
-      <svg width="56" height="56" viewBox="0 0 56 56">
-        <circle class="t-track" cx="28" cy="28" r="23"/>
-        <circle class="t-ring" id="t-ring" cx="28" cy="28" r="23" stroke-dasharray="144.5" stroke-dashoffset="0"/>
-      </svg>
-      <div class="t-txt" id="t-txt">20</div>
-    </div>
+    <div class="ans-chip" id="ans-chip">等待作答中</div>
     <div class="score-chip">⭐ <span id="score-disp">0</span></div>
   </div>
   <div class="prog"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
   <div class="q-card" id="q-text">問題載入中…</div>
   <div class="opts" id="opts-grid"></div>
+  <!-- 答完後顯示等待訊息 -->
+  <div class="answered-msg" id="answered-msg" style="display:none">
+    <div class="big" id="answered-emoji">✅</div>
+    <div id="answered-text">已送出！等待主持人公布答案…</div>
+  </div>
 </div>
 
 <!-- ⑤ 解答 -->
@@ -217,9 +220,9 @@ input[type=text]:focus { border-color: var(--gold); }
 <div class="confetti-wrap" id="confetti-wrap"></div>
 
 <script>
-// ── CONFIG（填入你的 Supabase 資訊）────────────────────────────
-const SUPABASE_URL = 'https://yucarcuvfonsqxmdqfmy.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1Y2FyY3V2Zm9uc3F4bWRxZm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjMzMTgsImV4cCI6MjA4OTMzOTMxOH0.2kzZnoDrn_1WuSXol8OBouQ4YmRzi13vCWws_0c5Eso';
+// ── CONFIG ──────────────────────────────────────────────────────
+const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 // ────────────────────────────────────────────────────────────────
 
 const QUESTIONS = [
@@ -231,15 +234,18 @@ const QUESTIONS = [
   { q:"🎯 聖經原文主要使用哪些語言？", opts:["中文、英文","希伯來文、亞蘭文、希臘文","拉丁文、希臘文","希伯來文、拉丁文"], correct:1, fact:"舊約主要以希伯來文寫成（另有少部分亞蘭文），新約幾乎全以當時的通用希臘文（Koine Greek）寫成。" }
 ];
 
-const TIMER_SECS = 20;
-const CIRC = 2 * Math.PI * 23; // ~144.5
-
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let roomId = '', playerId = '', myScore = 0, myCorrect = 0;
-let timerInterval = null, timeLeft = TIMER_SECS;
 let answered = false;
-let roomChannel = null;
+let answerPollInterval = null;
+
+// 從 URL 參數自動填入房號
+window.onload = () => {
+  const params = new URLSearchParams(location.search);
+  const room = params.get('room');
+  if (room) document.getElementById('inp-room').value = room.toUpperCase();
+};
 
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -275,7 +281,7 @@ async function fetchPlayerCount() {
 }
 
 function subscribeRoom() {
-  roomChannel = sb.channel('room:' + roomId)
+  sb.channel('room:' + roomId)
     .on('postgres_changes', { event:'UPDATE', schema:'public', table:'rooms', filter:`id=eq.${roomId}` }, handleRoomUpdate)
     .on('postgres_changes', { event:'INSERT', schema:'public', table:'players', filter:`room_id=eq.${roomId}` }, () => fetchPlayerCount())
     .subscribe();
@@ -291,16 +297,20 @@ function handleRoomUpdate(payload) {
 
 function loadQuestion(qIdx) {
   answered = false;
+  clearInterval(answerPollInterval);
+
   const q = QUESTIONS[qIdx];
   document.getElementById('q-num').textContent = `${qIdx + 1} / ${QUESTIONS.length}`;
   document.getElementById('prog-fill').style.width = `${(qIdx / QUESTIONS.length) * 100}%`;
   document.getElementById('q-text').textContent = q.q;
   document.getElementById('score-disp').textContent = myScore;
+  document.getElementById('ans-chip').textContent = '等待作答中';
+  document.getElementById('answered-msg').style.display = 'none';
 
   const grid = document.getElementById('opts-grid');
   grid.innerHTML = '';
   const labels = ['A','B','C','D'];
-  const colors = ['opt-A','opt-B','opt-C','opt-D'];
+  const colors  = ['opt-A','opt-B','opt-C','opt-D'];
   q.opts.forEach((opt, i) => {
     const btn = document.createElement('button');
     btn.className = `opt ${colors[i]}`;
@@ -309,38 +319,26 @@ function loadQuestion(qIdx) {
     grid.appendChild(btn);
   });
 
+  // 輪詢已答人數（每 3 秒）
+  answerPollInterval = setInterval(() => updateAnsweredCount(qIdx), 3000);
+
   show('s-quiz');
-  startTimer(qIdx);
 }
 
-function startTimer(qIdx) {
-  clearInterval(timerInterval);
-  timeLeft = TIMER_SECS;
-  updateTimer();
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    updateTimer();
-    if (timeLeft <= 0) { clearInterval(timerInterval); if (!answered) timeUp(qIdx); }
-  }, 1000);
-}
-
-function updateTimer() {
-  const ring = document.getElementById('t-ring');
-  const txt  = document.getElementById('t-txt');
-  const pct  = timeLeft / TIMER_SECS;
-  ring.style.strokeDashoffset = CIRC * (1 - pct);
-  ring.style.stroke = timeLeft <= 5 ? '#e74c3c' : timeLeft <= 10 ? '#f39c12' : '#f5a623';
-  txt.textContent = timeLeft;
+async function updateAnsweredCount(qIdx) {
+  const { count: total } = await sb.from('players').select('*', { count:'exact', head:true }).eq('room_id', roomId);
+  const { count: ans }   = await sb.from('answers').select('*', { count:'exact', head:true }).eq('room_id', roomId).eq('question_idx', qIdx);
+  document.getElementById('ans-chip').textContent = `${ans ?? 0} / ${total ?? 0} 人已答`;
 }
 
 async function selectAnswer(qIdx, chosen) {
   if (answered) return;
   answered = true;
-  clearInterval(timerInterval);
+  clearInterval(answerPollInterval);
 
   const q = QUESTIONS[qIdx];
   const isCorrect = chosen === q.correct;
-  const pts = isCorrect ? Math.round((timeLeft / TIMER_SECS) * 800) + 200 : 0;
+  const pts = isCorrect ? 1000 : 0;  // 固定分數，不計速度
 
   // 顯示選項結果
   const btns = document.querySelectorAll('.opt');
@@ -358,21 +356,19 @@ async function selectAnswer(qIdx, chosen) {
   await sb.from('players').update({ score: myScore }).eq('id', playerId);
 
   if (isCorrect) launchConfetti();
-  // reveal 由主持人觸發，玩家等待
-}
 
-async function timeUp(qIdx) {
-  if (answered) return;
-  answered = true;
-  const q = QUESTIONS[qIdx];
-  const btns = document.querySelectorAll('.opt');
-  btns.forEach((b, i) => { b.disabled = true; if (i === q.correct) b.classList.add('correct'); else b.classList.add('dim'); });
-  await sb.from('answers').insert({ room_id:roomId, player_id:playerId, question_idx:qIdx, chosen:-1, is_correct:false, pts:0 });
+  // 顯示「已答完」等待訊息
+  document.getElementById('answered-emoji').textContent = isCorrect ? '✅' : '❌';
+  document.getElementById('answered-text').textContent = isCorrect
+    ? '答對了！等待主持人公布答案…'
+    : '答錯了，等待主持人公布答案…';
+  document.getElementById('answered-msg').style.display = 'block';
 }
 
 async function showRevealScreen(qIdx) {
+  clearInterval(answerPollInterval);
   const q = QUESTIONS[qIdx];
-  // 查自己這題有沒有答對
+
   const { data } = await sb.from('answers').select('is_correct,pts').eq('player_id', playerId).eq('question_idx', qIdx).single();
   const isCorrect = data?.is_correct ?? false;
   const pts = data?.pts ?? 0;
@@ -383,7 +379,8 @@ async function showRevealScreen(qIdx) {
   ttl.className = 'reveal-ttl ' + (isCorrect ? 'ok' : 'fail');
 
   const ptsPop = document.getElementById('rv-pts');
-  if (isCorrect) { ptsPop.textContent = `+${pts}`; ptsPop.style.display = 'block'; } else { ptsPop.style.display = 'none'; }
+  if (isCorrect) { ptsPop.textContent = `+${pts}`; ptsPop.style.display = 'block'; }
+  else { ptsPop.style.display = 'none'; }
 
   if (q.fact) {
     document.getElementById('rv-fact-txt').textContent = q.fact;
@@ -401,7 +398,6 @@ async function showBoard(currentQ) {
   players.forEach((p, i) => {
     const div = document.createElement('div');
     div.className = 'rank-row' + (p.id === playerId ? ' me' : '');
-    // 只顯示第一名名字，其餘匿名
     const displayName = i === 0 ? p.nickname : (p.id === playerId ? p.nickname + ' (你)' : '匿名玩家');
     div.innerHTML = `<div class="rank-no">${medals[i] ?? (i+1)}</div><div class="rank-name">${displayName}</div><div class="rank-score">${p.score}</div>`;
     list.appendChild(div);
@@ -411,8 +407,8 @@ async function showBoard(currentQ) {
 }
 
 async function showEnd() {
+  clearInterval(answerPollInterval);
   const { data: players } = await sb.from('players').select('id,nickname,score').eq('room_id', roomId).order('score', { ascending:false }).limit(10);
-  const my = players.find(p => p.id === playerId);
   const rank = players.findIndex(p => p.id === playerId) + 1;
 
   let emoji = '🎊', title = '測驗完成！';
@@ -429,7 +425,6 @@ async function showEnd() {
   players.forEach((p, i) => {
     const div = document.createElement('div');
     div.className = 'rank-row' + (p.id === playerId ? ' me' : '');
-    // 只有第一名顯示名字
     const displayName = i === 0 ? p.nickname : (p.id === playerId ? p.nickname + ' (你)' : '匿名玩家');
     div.innerHTML = `<div class="rank-no">${medals[i] ?? (i+1)}</div><div class="rank-name">${displayName}</div><div class="rank-score">${p.score}</div>`;
     list.appendChild(div);
