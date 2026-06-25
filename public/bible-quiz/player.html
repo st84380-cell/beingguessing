@@ -40,11 +40,10 @@ input[type=text]:focus { border-color: var(--gold); }
 .btn:active { transform:scale(.97); }
 .btn-primary { background:var(--accent); color:#fff; box-shadow:0 6px 20px rgba(233,69,96,.4); }
 .btn-primary:hover { filter:brightness(1.1); }
+.btn-next { background: var(--gold); color:#111; box-shadow:0 6px 20px rgba(245,166,35,.4); }
+.btn-next:hover { filter:brightness(1.05); }
 
-/* room code */
 .room-code { font-size: clamp(36px,10vw,56px); font-weight:900; color:var(--gold); letter-spacing:8px; text-align:center; }
-
-/* waiting */
 .player-count { font-size:64px; font-weight:900; color:var(--gold); text-align:center; }
 .waiting-pulse { animation: pulse 1.5s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
@@ -57,24 +56,15 @@ input[type=text]:focus { border-color: var(--gold); }
 .q-num { font-size:17px; font-weight:800; }
 .score-chip { background:var(--gold); color:#111; border-radius:99px; padding:6px 18px; font-weight:900; font-size:15px; }
 
-/* answered count badge */
-.ans-chip {
-  background: rgba(255,255,255,0.1); border-radius:99px;
-  padding:6px 14px; font-size:13px; color:var(--muted); font-weight:600;
-}
-
-/* progress */
 .prog { width:100%; height:5px; background:rgba(255,255,255,.1); border-radius:99px; overflow:hidden; }
 .prog-fill { height:100%; background:var(--accent); border-radius:99px; transition:width .4s ease; }
 
-/* question */
 .q-card {
   width:100%; background:var(--card); border-radius:18px; padding:26px 20px;
   font-size:clamp(17px,4vw,22px); font-weight:700; line-height:1.5; text-align:center;
   min-height:90px; display:flex; align-items:center; justify-content:center;
 }
 
-/* options */
 .opts { width:100%; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .opt {
   border:none; cursor:pointer; border-radius:14px; padding:20px 14px;
@@ -94,34 +84,26 @@ input[type=text]:focus { border-color: var(--gold); }
 .opt.dim     { opacity:.3; }
 @keyframes pcorrect { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
 
-/* answered state */
-.answered-msg {
-  width:100%; background:var(--card); border-radius:14px; padding:18px;
-  text-align:center; font-size:16px; color:var(--muted);
+/* inline reveal after answer */
+.inline-reveal {
+  width:100%; background:var(--card); border-radius:16px; padding:20px;
+  display:flex; flex-direction:column; gap:12px; align-items:center;
 }
-.answered-msg .big { font-size:40px; margin-bottom:8px; }
-
-/* reveal */
-.reveal-emoji { font-size:56px; text-align:center; }
-.reveal-ttl { font-size:26px; font-weight:900; text-align:center; }
-.reveal-ttl.ok   { color:#2ecc71; }
-.reveal-ttl.fail { color:#e74c3c; }
-.pts-pop { font-size:40px; font-weight:900; color:var(--gold); text-align:center; animation:pop .5s cubic-bezier(.175,.885,.32,1.275); }
+.inline-result { font-size:22px; font-weight:900; text-align:center; }
+.inline-result.ok   { color:#2ecc71; }
+.inline-result.fail { color:#e74c3c; }
+.pts-pop { font-size:32px; font-weight:900; color:var(--gold); animation:pop .5s cubic-bezier(.175,.885,.32,1.275); }
 @keyframes pop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
-.fact { background:rgba(245,166,35,.1); border:1px solid rgba(245,166,35,.4); border-radius:12px; padding:16px 18px; font-size:14px; line-height:1.7; color:#ffe08a; }
-.fact strong { font-size:12px; text-transform:uppercase; letter-spacing:1px; opacity:.7; display:block; margin-bottom:6px; }
+.fact { width:100%; background:rgba(245,166,35,.1); border:1px solid rgba(245,166,35,.4); border-radius:12px; padding:14px 16px; font-size:14px; line-height:1.7; color:#ffe08a; }
+.fact strong { font-size:11px; text-transform:uppercase; letter-spacing:1px; opacity:.7; display:block; margin-bottom:4px; }
 
-/* waiting for host */
-.host-waiting { text-align:center; color:var(--muted); font-size:16px; }
+/* waiting for game to start */
 .spinner { display:inline-block; width:28px; height:28px; border:3px solid rgba(255,255,255,.1); border-top-color:var(--gold); border-radius:50%; animation:spin 1s linear infinite; }
 @keyframes spin { to{transform:rotate(360deg)} }
 
-/* leaderboard */
+/* leaderboard / end */
 .rank-list { width:100%; display:flex; flex-direction:column; gap:10px; }
-.rank-row {
-  display:flex; align-items:center; gap:14px;
-  background:var(--card); border-radius:14px; padding:14px 16px;
-}
+.rank-row { display:flex; align-items:center; gap:14px; background:var(--card); border-radius:14px; padding:14px 16px; }
 .rank-no { font-size:22px; font-weight:900; width:36px; text-align:center; }
 .rank-name { flex:1; font-size:16px; font-weight:700; }
 .rank-score { font-size:18px; font-weight:900; color:var(--gold); }
@@ -131,6 +113,12 @@ input[type=text]:focus { border-color: var(--gold); }
 .rank-row:nth-child(3) .rank-no { color:#cd7f32; }
 
 .confetti-wrap { position:fixed; inset:0; pointer-events:none; z-index:9999; }
+
+/* waiting for others banner */
+.others-banner {
+  width:100%; text-align:center; padding:10px;
+  font-size:13px; color:var(--muted);
+}
 
 @media(max-width:420px) { .opts { grid-template-columns:1fr; } }
 </style>
@@ -170,43 +158,47 @@ input[type=text]:focus { border-color: var(--gold); }
   </div>
 </div>
 
-<!-- ④ 答題 -->
+<!-- ④ 答題（含答後 inline reveal） -->
 <div id="s-quiz" class="screen">
   <div class="top-bar">
     <div class="q-num" id="q-num">1 / 6</div>
-    <div class="ans-chip" id="ans-chip">等待作答中</div>
     <div class="score-chip">⭐ <span id="score-disp">0</span></div>
   </div>
   <div class="prog"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
   <div class="q-card" id="q-text">問題載入中…</div>
   <div class="opts" id="opts-grid"></div>
-  <!-- 答完後顯示等待訊息 -->
-  <div class="answered-msg" id="answered-msg" style="display:none">
-    <div class="big" id="answered-emoji">✅</div>
-    <div id="answered-text">已送出！等待主持人公布答案…</div>
+
+  <!-- 答完後顯示，答前隱藏 -->
+  <div id="inline-reveal" style="display:none; width:100%; display:none; flex-direction:column; gap:14px; align-items:center;">
+    <div class="inline-reveal">
+      <div style="font-size:48px" id="rv-emoji">🎉</div>
+      <div class="inline-result" id="rv-result">答對了！</div>
+      <div class="pts-pop" id="rv-pts">+1000</div>
+      <div class="fact" id="rv-fact">
+        <strong>📖 你知道嗎？</strong>
+        <span id="rv-fact-txt"></span>
+      </div>
+    </div>
+    <button class="btn btn-next" id="btn-next" onclick="goNextQuestion()">下一題 →</button>
+    <div class="others-banner" id="others-banner"></div>
   </div>
 </div>
 
-<!-- ⑤ 解答 -->
-<div id="s-reveal" class="screen">
-  <div class="reveal-emoji" id="rv-emoji">🎉</div>
-  <div class="reveal-ttl" id="rv-ttl">答對了！</div>
-  <div class="pts-pop" id="rv-pts" style="display:none">+1000</div>
-  <div class="fact" id="rv-fact" style="display:none">
-    <strong>📖 你知道嗎？</strong>
-    <span id="rv-fact-txt"></span>
+<!-- ⑤ 等待主持人講解（全部答完後） -->
+<div id="s-waiting-end" class="screen">
+  <div style="font-size:64px;text-align:center">🎊</div>
+  <h1>你已完成所有題目！</h1>
+  <div class="card" style="text-align:center;gap:8px;display:flex;flex-direction:column">
+    <div style="font-size:56px;font-weight:900;color:var(--gold)" id="my-score-final">0</div>
+    <div class="sub" id="my-detail">答對 0 / 6 題</div>
   </div>
-  <div class="host-waiting"><div class="spinner"></div><br>等待主持人繼續…</div>
+  <div style="text-align:center;color:var(--muted);font-size:15px;display:flex;flex-direction:column;align-items:center;gap:10px">
+    <div class="spinner"></div>
+    等待主持人公布最終排名…
+  </div>
 </div>
 
-<!-- ⑥ 排行榜 -->
-<div id="s-board" class="screen">
-  <h1>🏆 排行榜</h1>
-  <div class="rank-list" id="rank-list"></div>
-  <div class="sub" id="board-sub">等待主持人公布下一題…</div>
-</div>
-
-<!-- ⑦ 結束 -->
+<!-- ⑥ 最終排行榜（主持人觸發） -->
 <div id="s-end" class="screen">
   <div style="font-size:72px;text-align:center" id="end-emoji">🎊</div>
   <h1 id="end-title">測驗完成！</h1>
@@ -220,10 +212,8 @@ input[type=text]:focus { border-color: var(--gold); }
 <div class="confetti-wrap" id="confetti-wrap"></div>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────
 const SUPABASE_URL      = 'https://yucarcuvfonsqxmdqfmy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1Y2FyY3V2Zm9uc3F4bWRxZm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjMzMTgsImV4cCI6MjA4OTMzOTMxOH0.2kzZnoDrn_1WuSXol8OBouQ4YmRzi13vCWws_0c5Eso';
-// ────────────────────────────────────────────────────────────────
 
 const QUESTIONS = [
   { q:"🎯 聖經是一本書還是一本書庫？", opts:["一本書","一本書庫（多卷合集）","小說集","歷史年表"], correct:1, fact:"聖經是由 66 卷書組成的書庫，約 40 位作者，歷時約 1,500 年完成，原文使用希伯來文、亞蘭文和希臘文。" },
@@ -236,11 +226,11 @@ const QUESTIONS = [
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let roomId = '', playerId = '', myScore = 0, myCorrect = 0;
+let roomId = '', playerId = '';
+let myScore = 0, myCorrect = 0;
+let currentQIdx = 0;
 let answered = false;
-let answerPollInterval = null;
 
-// 從 URL 參數自動填入房號
 window.onload = () => {
   const params = new URLSearchParams(location.search);
   const room = params.get('room');
@@ -266,7 +256,7 @@ async function joinRoom() {
 async function joinGame() {
   const nick = document.getElementById('inp-name').value.trim();
   if (!nick) return alert('請輸入暱稱');
-  const { data, error } = await sb.from('players').insert({ room_id: roomId, nickname: nick, score: 0 }).select().single();
+  const { data, error } = await sb.from('players').insert({ room_id: roomId, nickname: nick, score: 0, completed: false }).select().single();
   if (error) return alert('加入失敗：' + error.message);
   playerId = data.id;
   document.getElementById('room-display').textContent = roomId;
@@ -289,56 +279,47 @@ function subscribeRoom() {
 
 function handleRoomUpdate(payload) {
   const room = payload.new;
-  if (room.status === 'question') loadQuestion(room.current_q);
-  if (room.status === 'reveal')   showRevealScreen(room.current_q);
-  if (room.status === 'board')    showBoard(room.current_q);
+  if (room.status === 'question' && currentQIdx === 0 && !answered) {
+    // 第一題由主持人觸發
+    loadQuestion(0);
+  }
   if (room.status === 'finished') showEnd();
 }
 
 function loadQuestion(qIdx) {
+  currentQIdx = qIdx;
   answered = false;
-  clearInterval(answerPollInterval);
+
+  // 隱藏 inline reveal，顯示選項
+  document.getElementById('inline-reveal').style.display = 'none';
+  document.getElementById('opts-grid').style.display = 'grid';
 
   const q = QUESTIONS[qIdx];
   document.getElementById('q-num').textContent = `${qIdx + 1} / ${QUESTIONS.length}`;
   document.getElementById('prog-fill').style.width = `${(qIdx / QUESTIONS.length) * 100}%`;
   document.getElementById('q-text').textContent = q.q;
   document.getElementById('score-disp').textContent = myScore;
-  document.getElementById('ans-chip').textContent = '等待作答中';
-  document.getElementById('answered-msg').style.display = 'none';
 
   const grid = document.getElementById('opts-grid');
   grid.innerHTML = '';
-  const labels = ['A','B','C','D'];
-  const colors  = ['opt-A','opt-B','opt-C','opt-D'];
-  q.opts.forEach((opt, i) => {
+  ['A','B','C','D'].forEach((lbl, i) => {
     const btn = document.createElement('button');
-    btn.className = `opt ${colors[i]}`;
-    btn.innerHTML = `<span class="opt-lbl">${labels[i]}</span><span>${opt}</span>`;
+    btn.className = `opt opt-${lbl}`;
+    btn.innerHTML = `<span class="opt-lbl">${lbl}</span><span>${q.opts[i]}</span>`;
     btn.onclick = () => selectAnswer(qIdx, i);
     grid.appendChild(btn);
   });
 
-  // 輪詢已答人數（每 3 秒）
-  answerPollInterval = setInterval(() => updateAnsweredCount(qIdx), 3000);
-
   show('s-quiz');
-}
-
-async function updateAnsweredCount(qIdx) {
-  const { count: total } = await sb.from('players').select('*', { count:'exact', head:true }).eq('room_id', roomId);
-  const { count: ans }   = await sb.from('answers').select('*', { count:'exact', head:true }).eq('room_id', roomId).eq('question_idx', qIdx);
-  document.getElementById('ans-chip').textContent = `${ans ?? 0} / ${total ?? 0} 人已答`;
 }
 
 async function selectAnswer(qIdx, chosen) {
   if (answered) return;
   answered = true;
-  clearInterval(answerPollInterval);
 
   const q = QUESTIONS[qIdx];
   const isCorrect = chosen === q.correct;
-  const pts = isCorrect ? 1000 : 0;  // 固定分數，不計速度
+  const pts = isCorrect ? 1000 : 0;
 
   // 顯示選項結果
   const btns = document.querySelectorAll('.opt');
@@ -351,67 +332,53 @@ async function selectAnswer(qIdx, chosen) {
 
   if (isCorrect) { myScore += pts; myCorrect++; }
 
-  // 寫入 Supabase
   await sb.from('answers').insert({ room_id:roomId, player_id:playerId, question_idx:qIdx, chosen, is_correct:isCorrect, pts });
   await sb.from('players').update({ score: myScore }).eq('id', playerId);
 
   if (isCorrect) launchConfetti();
 
-  // 顯示「已答完」等待訊息
-  document.getElementById('answered-emoji').textContent = isCorrect ? '✅' : '❌';
-  document.getElementById('answered-text').textContent = isCorrect
-    ? '答對了！等待主持人公布答案…'
-    : '答錯了，等待主持人公布答案…';
-  document.getElementById('answered-msg').style.display = 'block';
+  // 顯示 inline reveal
+  showInlineReveal(isCorrect, pts, q.fact, qIdx);
 }
 
-async function showRevealScreen(qIdx) {
-  clearInterval(answerPollInterval);
-  const q = QUESTIONS[qIdx];
-
-  const { data } = await sb.from('answers').select('is_correct,pts').eq('player_id', playerId).eq('question_idx', qIdx).single();
-  const isCorrect = data?.is_correct ?? false;
-  const pts = data?.pts ?? 0;
-
+function showInlineReveal(isCorrect, pts, fact, qIdx) {
   document.getElementById('rv-emoji').textContent = isCorrect ? '🎉' : '😅';
-  const ttl = document.getElementById('rv-ttl');
-  ttl.textContent = isCorrect ? '答對了！' : '沒關係，繼續學習！';
-  ttl.className = 'reveal-ttl ' + (isCorrect ? 'ok' : 'fail');
+  const result = document.getElementById('rv-result');
+  result.textContent = isCorrect ? '答對了！' : '沒關係，繼續學習！';
+  result.className = 'inline-result ' + (isCorrect ? 'ok' : 'fail');
 
   const ptsPop = document.getElementById('rv-pts');
-  if (isCorrect) { ptsPop.textContent = `+${pts}`; ptsPop.style.display = 'block'; }
-  else { ptsPop.style.display = 'none'; }
+  ptsPop.textContent = isCorrect ? '+1000' : '';
+  ptsPop.style.display = isCorrect ? 'block' : 'none';
 
-  if (q.fact) {
-    document.getElementById('rv-fact-txt').textContent = q.fact;
-    document.getElementById('rv-fact').style.display = 'block';
-  } else { document.getElementById('rv-fact').style.display = 'none'; }
+  document.getElementById('rv-fact-txt').textContent = fact ?? '';
 
-  show('s-reveal');
+  // 最後一題改按鈕文字
+  const btnNext = document.getElementById('btn-next');
+  btnNext.textContent = qIdx < QUESTIONS.length - 1 ? '下一題 →' : '查看結果 🏆';
+
+  document.getElementById('others-banner').textContent = '';
+  document.getElementById('inline-reveal').style.display = 'flex';
 }
 
-async function showBoard(currentQ) {
-  const { data: players } = await sb.from('players').select('id,nickname,score').eq('room_id', roomId).order('score', { ascending:false }).limit(10);
-  const list = document.getElementById('rank-list');
-  list.innerHTML = '';
-  const medals = ['🥇','🥈','🥉'];
-  players.forEach((p, i) => {
-    const div = document.createElement('div');
-    div.className = 'rank-row' + (p.id === playerId ? ' me' : '');
-    const displayName = i === 0 ? p.nickname : (p.id === playerId ? p.nickname + ' (你)' : '匿名玩家');
-    div.innerHTML = `<div class="rank-no">${medals[i] ?? (i+1)}</div><div class="rank-name">${displayName}</div><div class="rank-score">${p.score}</div>`;
-    list.appendChild(div);
-  });
-  document.getElementById('board-sub').textContent = currentQ < QUESTIONS.length - 1 ? '等待主持人繼續下一題…' : '等待最終結果…';
-  show('s-board');
+async function goNextQuestion() {
+  const nextIdx = currentQIdx + 1;
+  if (nextIdx < QUESTIONS.length) {
+    loadQuestion(nextIdx);
+  } else {
+    // 全部完成
+    await sb.from('players').update({ completed: true }).eq('id', playerId);
+    document.getElementById('my-score-final').textContent = myScore.toLocaleString();
+    document.getElementById('my-detail').textContent = `答對 ${myCorrect} / ${QUESTIONS.length} 題`;
+    show('s-waiting-end');
+  }
 }
 
 async function showEnd() {
-  clearInterval(answerPollInterval);
   const { data: players } = await sb.from('players').select('id,nickname,score').eq('room_id', roomId).order('score', { ascending:false }).limit(10);
   const rank = players.findIndex(p => p.id === playerId) + 1;
 
-  let emoji = '🎊', title = '測驗完成！';
+  let emoji = '🎊', title = '最終排名！';
   if (rank === 1) { emoji = '🏆'; title = '你是冠軍！！！'; launchConfetti(true); }
 
   document.getElementById('end-emoji').textContent = emoji;
@@ -425,8 +392,8 @@ async function showEnd() {
   players.forEach((p, i) => {
     const div = document.createElement('div');
     div.className = 'rank-row' + (p.id === playerId ? ' me' : '');
-    const displayName = i === 0 ? p.nickname : (p.id === playerId ? p.nickname + ' (你)' : '匿名玩家');
-    div.innerHTML = `<div class="rank-no">${medals[i] ?? (i+1)}</div><div class="rank-name">${displayName}</div><div class="rank-score">${p.score}</div>`;
+    const name = i === 0 ? p.nickname : (p.id === playerId ? p.nickname + ' (你)' : '匿名玩家');
+    div.innerHTML = `<div class="rank-no">${medals[i]??i+1}</div><div class="rank-name">${name}</div><div class="rank-score">${p.score}</div>`;
     list.appendChild(div);
   });
   show('s-end');
@@ -437,14 +404,14 @@ function launchConfetti(big = false) {
   const colors = ['#f5a623','#e94560','#2ecc71','#3498db','#9b59b6','#fff'];
   for (let i = 0; i < (big ? 80 : 28); i++) {
     const el = document.createElement('div');
-    const size = Math.random() * 10 + 6;
-    el.style.cssText = `position:absolute;left:${Math.random()*100}%;top:-20px;width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>.5?'50%':'2px'};animation:fall ${1.5+Math.random()*2}s ease-in ${Math.random()*.5}s forwards;`;
+    const sz = Math.random() * 10 + 6;
+    el.style.cssText = `position:absolute;left:${Math.random()*100}%;top:-20px;width:${sz}px;height:${sz}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>.5?'50%':'2px'};animation:fall ${1.5+Math.random()*2}s ease-in ${Math.random()*.5}s forwards;`;
     wrap.appendChild(el);
   }
   setTimeout(() => wrap.innerHTML = '', 4000);
 }
 const cs = document.createElement('style');
-cs.textContent = `@keyframes fall { to { transform: translateY(105vh) rotate(720deg); opacity:0; } }`;
+cs.textContent = `@keyframes fall{to{transform:translateY(105vh) rotate(720deg);opacity:0}}`;
 document.head.appendChild(cs);
 </script>
 </body>
