@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import { copyFileSync, mkdirSync, existsSync } from 'fs'
 
-// Plugin to copy public/bible-quiz files to dist/bible-quiz after build
 function copyBibleQuiz() {
   return {
     name: 'copy-bible-quiz',
@@ -14,10 +13,7 @@ function copyBibleQuiz() {
       files.forEach(f => {
         const src = resolve(__dirname, `public/bible-quiz/${f}`)
         const dest = resolve(__dirname, `dist/bible-quiz/${f}`)
-        if (existsSync(src)) {
-          copyFileSync(src, dest)
-          console.log(`✓ Copied ${f} → dist/bible-quiz/`)
-        }
+        if (existsSync(src)) copyFileSync(src, dest)
       })
     }
   }
