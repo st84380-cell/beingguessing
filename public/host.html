@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎛️ 主持人控制台 · 聖經成書小測驗</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+:root {
+  --bg:#0d1117; --card:#161b22; --border:#30363d;
+  --accent:#e94560; --gold:#f5a623; --green:#2ecc71;
+  --white:#e6edf3; --muted:#8b949e;
+  --A:#e74c3c; --B:#2980b9; --C:#f39c12; --D:#27ae60;
+}
+body { font-family:'Segoe UI','Microsoft JhengHei',sans-serif; background:var(--bg); color:var(--white); min-height:100vh; padding:0; }
+
+/* ── LAYOUT ── */
+.app { display:grid; grid-template-rows:60px 1fr; min-height:100vh; }
+.topbar { background:var(--card); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; }
+.topbar-title { font-size:18px; font-weight:800; }
+.topbar-room { font-size:22px; font-weight:900; color:var(--gold); letter-spacing:4px; }
+.topbar-actions { display:flex; gap:10px; align-items:center; }
+
+.main { display:grid; grid-template-columns:320px 1fr; height:calc(100vh - 60px); overflow:hidden; }
+.sidebar { border-right:1px solid var(--border); overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:16px; }
+.content { overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:20px; }
+
+/* ── CARDS ── */
+.card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; }
+.card-title { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:12px; font-weight:700; }
+
+/* ── STAT CHIPS ── */
+.stat-row { display:flex; gap:10px; flex-wrap:wrap; }
+.stat-chip { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 16px; text-align:center; flex:1; min-width:80px; }
+.stat-num { font-size:28px; font-weight:900; color:var(--gold); }
+.stat-lbl { font-size:11px; color:var(--muted); }
+
+/* ── BUTTONS ── */
+.btn { border:none; cursor:pointer; border-radius:10px; font-family:inherit; font-weight:700; transition:filter .15s, transform .1s; }
+.btn:active { transform:scale(.97); }
+.btn-big { width:100%; padding:16px; font-size:17px; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { filter:brightness(1.1); }
+.btn-green { background:var(--green); color:#111; }
+.btn-green:hover { filter:brightness(1.1); }
+.btn-gold { background:var(--gold); color:#111; }
+.btn-ghost { background:rgba(255,255,255,.08); color:var(--white); padding:8px 16px; font-size:14px; }
+.btn-ghost:hover { background:rgba(255,255,255,.14); }
+.btn-danger { background:#c0392b; color:#fff; padding:8px 16px; font-size:14px; }
+.btn:disabled { opacity:.45; cursor:default; }
+
+/* ── STATUS BADGE ── */
+.status-badge { display:inline-block; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:700; }
+.status-lobby    { background:rgba(245,166,35,.15); color:var(--gold); }
+.status-question { background:rgba(46,204,113,.15); color:var(--green); }
+.status-reveal   { background:rgba(52,152,219,.15); color:#3498db; }
+.status-board    { background:rgba(155,89,182,.15); color:#9b59b6; }
+.status-finished { background:rgba(231,76,60,.15); color:#e74c3c; }
+
+/* ── QUESTION CARD ── */
+.q-display { font-size:clamp(18px,2.5vw,26px); font-weight:700; line-height:1.5; margin-bottom:16px; }
+.opts-preview { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.opt-prev {
+  border-radius:10px; padding:12px 14px;
+  display:flex; align-items:center; gap:10px;
+  font-size:14px; font-weight:600; color:#fff;
+  position:relative;
+}
+.opt-prev-A { background:var(--A); }
+.opt-prev-B { background:var(--B); }
+.opt-prev-C { background:var(--C); }
+.opt-prev-D { background:var(--D); }
+.opt-prev.correct-opt { outline:2px solid #fff; }
+.opt-lbl-sm { background:rgba(255,255,255,.25); border-radius:50%; width:26px; height:26px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; }
+
+/* ── BAR CHART ── */
+.chart-wrap { display:flex; flex-direction:column; gap:8px; }
+.bar-row { display:flex; align-items:center; gap:10px; }
+.bar-label { width:24px; font-size:13px; font-weight:700; text-align:center; }
+.bar-track { flex:1; height:28px; background:rgba(255,255,255,.06); border-radius:6px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:6px; transition:width .6s ease; display:flex; align-items:center; padding-left:10px; font-size:13px; font-weight:700; color:#fff; white-space:nowrap; }
+.bar-count { font-size:13px; color:var(--muted); min-width:32px; text-align:right; }
+
+/* ── PLAYER LIST ── */
+.player-list { display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto; }
+.player-row { display:flex; align-items:center; gap:10px; padding:8px 10px; background:rgba(255,255,255,.04); border-radius:8px; font-size:13px; }
+.player-nick { flex:1; font-weight:600; }
+.player-score { color:var(--gold); font-weight:700; }
+.player-ans { font-size:11px; }
+
+/* ── RANK ── */
+.rank-list { display:flex; flex-direction:column; gap:8px; }
+.rank-row { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.05); border-radius:10px; padding:12px 14px; }
+.rank-no { font-size:20px; font-weight:900; width:32px; text-align:center; }
+.rank-name { flex:1; font-weight:700; }
+.rank-score { font-size:16px; font-weight:900; color:var(--gold); }
+
+/* ── QR ── */
+.qr-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; }
+#qr-canvas { border-radius:10px; background:#fff; padding:8px; }
+
+/* ── PROGRESS ── */
+.step-dots { display:flex; gap:6px; justify-content:center; }
+.dot { width:10px; height:10px; border-radius:50%; background:var(--border); transition:background .3s; }
+.dot.done { background:var(--green); }
+.dot.current { background:var(--gold); }
+
+/* ── LOBBY OVERLAY ── */
+#lobby-view, #game-view { display:none; }
+#lobby-view.active, #game-view.active { display:contents; }
+
+.lobby-center { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:28px; text-align:center; }
+.lobby-code { font-size:clamp(48px,10vw,80px); font-weight:900; color:var(--gold); letter-spacing:10px; }
+.lobby-count { font-size:56px; font-weight:900; }
+
+@media(max-width:768px) { .main { grid-template-columns:1fr; } .sidebar { display:none; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-title">🎛️ 主持人控制台</div>
+  <div class="topbar-room" id="room-label">------</div>
+  <div class="topbar-actions">
+    <span class="status-badge status-lobby" id="status-badge">等待中</span>
+    <button class="btn btn-ghost" onclick="copyLink()">📋 複製玩家連結</button>
+    <button class="btn btn-danger" onclick="endGame()">結束遊戲</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <!-- Stats -->
+  <div class="card">
+    <div class="card-title">即時統計</div>
+    <div class="stat-row">
+      <div class="stat-chip"><div class="stat-num" id="stat-players">0</div><div class="stat-lbl">玩家</div></div>
+      <div class="stat-chip"><div class="stat-num" id="stat-answered">0</div><div class="stat-lbl">已答題</div></div>
+      <div class="stat-chip"><div class="stat-num" id="stat-correct">0</div><div class="stat-lbl">答對</div></div>
+    </div>
+  </div>
+
+  <!-- Progress dots -->
+  <div class="card">
+    <div class="card-title">題目進度</div>
+    <div class="step-dots" id="step-dots"></div>
+  </div>
+
+  <!-- Player list -->
+  <div class="card" style="flex:1">
+    <div class="card-title">玩家列表</div>
+    <div class="player-list" id="player-list"></div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- LOBBY VIEW -->
+  <div id="lobby-view" class="active">
+    <div class="lobby-center">
+      <div>
+        <div style="font-size:16px;color:var(--muted);margin-bottom:8px">玩家掃描 QR 或輸入房號加入</div>
+        <div class="lobby-code" id="lobby-code">------</div>
+      </div>
+      <div class="qr-wrap">
+        <canvas id="qr-canvas" width="180" height="180"></canvas>
+        <div style="font-size:13px;color:var(--muted)" id="player-link-disp"></div>
+      </div>
+      <div>
+        <div style="font-size:16px;color:var(--muted);margin-bottom:4px">已加入玩家</div>
+        <div class="lobby-count" id="lobby-count">0</div>
+      </div>
+      <button class="btn btn-primary btn-big" style="max-width:320px" onclick="startGame()">🚀 開始遊戲</button>
+    </div>
+  </div>
+
+  <!-- GAME VIEW -->
+  <div id="game-view">
+
+    <!-- Question display -->
+    <div class="card">
+      <div class="card-title" id="q-label">第 1 題 / 共 6 題</div>
+      <div class="q-display" id="q-display">—</div>
+      <div class="opts-preview" id="opts-preview"></div>
+    </div>
+
+    <!-- Answer distribution bar chart -->
+    <div class="card">
+      <div class="card-title">作答分布</div>
+      <div class="chart-wrap" id="chart-wrap">
+        <div style="color:var(--muted);font-size:14px">等待玩家作答…</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-gold btn-big" style="flex:1;min-width:180px" id="btn-reveal" onclick="revealAnswer()" disabled>
+        📊 公布答案
+      </button>
+      <button class="btn btn-green btn-big" style="flex:1;min-width:180px" id="btn-next" onclick="nextQuestion()" disabled>
+        下一題 →
+      </button>
+    </div>
+
+    <!-- Leaderboard preview -->
+    <div class="card" id="board-card" style="display:none">
+      <div class="card-title">目前排行榜 <span style="color:var(--muted);font-size:11px">（只顯示第一名姓名）</span></div>
+      <div class="rank-list" id="host-rank-list"></div>
+    </div>
+
+  </div>
+</div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- QR lib (simple, no external CDN needed — we draw manually or use qrcode.js) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────
+const SUPABASE_URL     = 'https://yucarcuvfonsqxmdqfmy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1Y2FyY3V2Zm9uc3F4bWRxZm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjMzMTgsImV4cCI6MjA4OTMzOTMxOH0.2kzZnoDrn_1WuSXol8OBouQ4YmRzi13vCWws_0c5Eso';
+const PLAYER_BASE_URL  = 'https://beingguessing.vercel.app/bible-quiz/player.html';
+// ────────────────────────────────────────────────────────────────
+
+const QUESTIONS = [
+  { q:"🎯 聖經是一本書還是一本書庫？", opts:["一本書","一本書庫（多卷合集）","小說集","歷史年表"], correct:1 },
+  { q:"🎯 聖經共有幾卷？", opts:["39 卷","27 卷","66 卷","73 卷"], correct:2 },
+  { q:"🎯 聖經完成歷經多久？", opts:["約 100 年","約 500 年","約 1,000 年","約 1,500 年"], correct:3 },
+  { q:"🎯 聖經約有多少位作者？", opts:["1 位","12 位","約 40 位","100 位"], correct:2 },
+  { q:"🎯 以下哪種職業「不包含」在聖經作者中？", opts:["漁夫","醫生","君王","電腦工程師"], correct:3 },
+  { q:"🎯 聖經原文主要使用哪些語言？", opts:["中文、英文","希伯來文、亞蘭文、希臘文","拉丁文、希臘文","希伯來文、拉丁文"], correct:1 }
+];
+const OPT_COLORS_CSS = ['var(--A)','var(--B)','var(--C)','var(--D)'];
+const OPT_LABELS = ['A','B','C','D'];
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let roomId = '';
+let currentQ = 0;
+let playerCount = 0;
+let pollInterval = null;
+
+// ── INIT ────────────────────────────────────────────────────────
+window.onload = async () => {
+  roomId = generateRoomId();
+  // 建立 room
+  await sb.from('rooms').insert({ id: roomId, status:'lobby', current_q:0 });
+
+  document.getElementById('room-label').textContent = roomId;
+  document.getElementById('lobby-code').textContent = roomId;
+
+  const playerUrl = `${PLAYER_BASE_URL}?room=${roomId}`;
+  document.getElementById('player-link-disp').textContent = playerUrl;
+  QRCode.toCanvas(document.getElementById('qr-canvas'), playerUrl, { width:180, margin:1 });
+
+  buildStepDots();
+  subscribeRoom();
+  pollAnswers(); // poll every 2s for answer distribution
+};
+
+function generateRoomId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length:6 }, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function buildStepDots() {
+  const wrap = document.getElementById('step-dots');
+  wrap.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' current' : '');
+    d.id = `dot-${i}`;
+    wrap.appendChild(d);
+  });
+}
+
+// ── SUPABASE REALTIME ────────────────────────────────────────────
+function subscribeRoom() {
+  sb.channel('host-room:' + roomId)
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'players', filter:`room_id=eq.${roomId}` }, () => refreshPlayers())
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'answers', filter:`room_id=eq.${roomId}` }, () => refreshAnswerStats())
+    .subscribe();
+}
+
+async function refreshPlayers() {
+  const { data } = await sb.from('players').select('id,nickname,score').eq('room_id', roomId).order('score', { ascending:false });
+  playerCount = data?.length ?? 0;
+  document.getElementById('stat-players').textContent = playerCount;
+  document.getElementById('lobby-count').textContent = playerCount;
+
+  const list = document.getElementById('player-list');
+  list.innerHTML = '';
+  (data ?? []).forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'player-row';
+    div.id = `pl-${p.id}`;
+    div.innerHTML = `<span class="player-nick">${p.nickname}</span><span class="player-score">${p.score}</span><span class="player-ans" id="ans-${p.id}"></span>`;
+    list.appendChild(div);
+  });
+}
+
+async function refreshAnswerStats() {
+  const { data } = await sb.from('answers').select('chosen,is_correct,player_id').eq('room_id', roomId).eq('question_idx', currentQ);
+  if (!data) return;
+
+  const counts = [0,0,0,0];
+  let correct = 0;
+  data.forEach(a => { if (a.chosen >= 0) counts[a.chosen]++; if (a.is_correct) correct++; });
+  const total = data.length;
+
+  document.getElementById('stat-answered').textContent = total;
+  document.getElementById('stat-correct').textContent = correct;
+
+  renderChart(counts, total);
+  updatePlayerAnswerIcons(data);
+
+  // auto-enable reveal when everyone answered
+  if (total >= playerCount && playerCount > 0) {
+    document.getElementById('btn-reveal').disabled = false;
+  }
+}
+
+function renderChart(counts, total) {
+  const wrap = document.getElementById('chart-wrap');
+  wrap.innerHTML = '';
+  const q = QUESTIONS[currentQ];
+  counts.forEach((c, i) => {
+    const pct = total > 0 ? Math.round((c / total) * 100) : 0;
+    const isCorrect = i === q.correct;
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="bar-label" style="color:${OPT_COLORS_CSS[i]}">${OPT_LABELS[i]}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${isCorrect ? 'var(--green)' : OPT_COLORS_CSS[i]}">
+          ${pct > 8 ? pct + '%' : ''}
+        </div>
+      </div>
+      <div class="bar-count">${c} 人</div>`;
+    wrap.appendChild(row);
+  });
+}
+
+function updatePlayerAnswerIcons(data) {
+  data.forEach(a => {
+    const el = document.getElementById(`ans-${a.player_id}`);
+    if (el) el.textContent = a.is_correct ? '✅' : '❌';
+  });
+}
+
+function pollAnswers() {
+  pollInterval = setInterval(refreshAnswerStats, 2000);
+}
+
+// ── GAME CONTROL ─────────────────────────────────────────────────
+async function startGame() {
+  await refreshPlayers();
+  if (playerCount === 0) { if (!confirm('還沒有玩家加入，確定開始？')) return; }
+
+  currentQ = 0;
+  await sb.from('rooms').update({ status:'question', current_q:0 }).eq('id', roomId);
+
+  setStatus('question', '進行中');
+  showGameView();
+  loadHostQuestion(0);
+}
+
+function showGameView() {
+  document.getElementById('lobby-view').classList.remove('active');
+  document.getElementById('game-view').classList.add('active');
+}
+
+function loadHostQuestion(qIdx) {
+  const q = QUESTIONS[qIdx];
+  document.getElementById('q-label').textContent = `第 ${qIdx+1} 題 / 共 ${QUESTIONS.length} 題`;
+  document.getElementById('q-display').textContent = q.q;
+
+  // options preview
+  const prev = document.getElementById('opts-preview');
+  prev.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = `opt-prev opt-prev-${OPT_LABELS[i]}${i===q.correct?' correct-opt':''}`;
+    div.innerHTML = `<span class="opt-lbl-sm">${OPT_LABELS[i]}</span><span>${opt}</span>${i===q.correct?'<span style="margin-left:auto">✓</span>':''}`;
+    prev.appendChild(div);
+  });
+
+  // reset chart
+  document.getElementById('chart-wrap').innerHTML = '<div style="color:var(--muted);font-size:14px">等待玩家作答…</div>';
+  document.getElementById('stat-answered').textContent = 0;
+  document.getElementById('stat-correct').textContent = 0;
+  document.getElementById('btn-reveal').disabled = false; // host can reveal anytime
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('board-card').style.display = 'none';
+
+  // update step dots
+  QUESTIONS.forEach((_, i) => {
+    const d = document.getElementById(`dot-${i}`);
+    if (!d) return;
+    d.className = 'dot' + (i < qIdx ? ' done' : i === qIdx ? ' current' : '');
+  });
+}
+
+async function revealAnswer() {
+  await sb.from('rooms').update({ status:'reveal' }).eq('id', roomId);
+  document.getElementById('btn-reveal').disabled = true;
+  document.getElementById('btn-next').disabled = false;
+  setStatus('reveal', '公布答案');
+
+  // show leaderboard preview
+  await refreshLeaderboard();
+  document.getElementById('board-card').style.display = 'block';
+}
+
+async function nextQuestion() {
+  currentQ++;
+  if (currentQ >= QUESTIONS.length) {
+    await endGame();
+    return;
+  }
+  await sb.from('rooms').update({ status:'question', current_q:currentQ }).eq('id', roomId);
+  setStatus('question', '進行中');
+  loadHostQuestion(currentQ);
+}
+
+async function endGame() {
+  clearInterval(pollInterval);
+  await sb.from('rooms').update({ status:'finished' }).eq('id', roomId);
+  setStatus('finished', '已結束');
+  await refreshLeaderboard();
+  document.getElementById('board-card').style.display = 'block';
+  document.getElementById('btn-reveal').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+}
+
+async function refreshLeaderboard() {
+  const { data } = await sb.from('players').select('nickname,score').eq('room_id', roomId).order('score', { ascending:false }).limit(10);
+  const list = document.getElementById('host-rank-list');
+  list.innerHTML = '';
+  const medals = ['🥇','🥈','🥉'];
+  (data ?? []).forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'rank-row';
+    // 主持人看到所有名字；玩家端只有第一名具名
+    div.innerHTML = `<div class="rank-no">${medals[i]??i+1}</div><div class="rank-name">${p.nickname}</div><div class="rank-score">${p.score}</div>`;
+    list.appendChild(div);
+  });
+}
+
+// ── UTILS ────────────────────────────────────────────────────────
+function setStatus(key, label) {
+  const badge = document.getElementById('status-badge');
+  badge.textContent = label;
+  badge.className = `status-badge status-${key}`;
+}
+
+function copyLink() {
+  const url = `${PLAYER_BASE_URL}?room=${roomId}`;
+  navigator.clipboard.writeText(url).then(() => alert('玩家連結已複製！\n' + url));
+}
+</script>
+</body>
+</html>

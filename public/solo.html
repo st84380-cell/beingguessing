@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📜 聖經成書小測驗</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1a1a2e;
+    --card: #16213e;
+    --accent: #e94560;
+    --gold: #f5a623;
+    --green: #0f9b58;
+    --purple: #8e44ad;
+    --blue: #2980b9;
+    --red: #e74c3c;
+    --yellow: #f39c12;
+    --white: #ffffff;
+    --text-muted: #aaa;
+  }
+
+  body {
+    font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+    background: var(--bg);
+    color: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; width: 100%; max-width: 760px; animation: fadeIn 0.4s ease; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── INTRO ── */
+  #intro { text-align: center; gap: 20px; }
+  .intro-icon { font-size: 80px; line-height: 1; }
+  .intro-title { font-size: clamp(28px, 6vw, 48px); font-weight: 900; letter-spacing: 1px; }
+  .intro-sub { font-size: 16px; color: var(--text-muted); }
+  .intro-badge {
+    background: var(--card);
+    border: 2px solid var(--gold);
+    border-radius: 16px;
+    padding: 16px 28px;
+    font-size: 15px;
+    color: var(--gold);
+    line-height: 1.8;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    border: none; cursor: pointer; border-radius: 12px;
+    font-weight: 800; font-family: inherit; letter-spacing: 0.5px;
+    transition: transform 0.1s, box-shadow 0.1s, filter 0.1s;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    font-size: 20px;
+    padding: 18px 60px;
+    box-shadow: 0 6px 20px rgba(233,69,96,0.5);
+  }
+  .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 8px 28px rgba(233,69,96,0.65); }
+  .btn-sm {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    font-size: 14px;
+    padding: 10px 24px;
+  }
+  .btn-sm:hover { background: rgba(255,255,255,0.2); }
+
+  /* ── QUIZ ── */
+  #quiz { gap: 20px; }
+
+  .top-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--card);
+    border-radius: 16px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .q-counter { font-size: 18px; font-weight: 800; color: var(--white); }
+  .score-badge {
+    background: var(--gold);
+    color: #111;
+    border-radius: 20px;
+    padding: 4px 16px;
+    font-weight: 900;
+    font-size: 16px;
+  }
+
+  /* Timer ring */
+  .timer-wrap { position: relative; width: 64px; height: 64px; }
+  .timer-wrap svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+  .timer-track { fill: none; stroke: #333; stroke-width: 5; }
+  .timer-ring { fill: none; stroke: var(--gold); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+  .timer-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900;
+  }
+
+  .question-card {
+    width: 100%;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 28px 24px;
+    text-align: center;
+    font-size: clamp(18px, 4vw, 24px);
+    font-weight: 700;
+    line-height: 1.5;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .options-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .option-btn {
+    border: none; cursor: pointer; border-radius: 16px;
+    padding: 22px 16px;
+    font-size: clamp(15px, 3vw, 18px);
+    font-weight: 700;
+    font-family: inherit;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.12s, filter 0.12s, box-shadow 0.12s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    text-align: left;
+    line-height: 1.4;
+  }
+  .option-btn:hover:not(:disabled) { transform: translateY(-3px); filter: brightness(1.1); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .option-btn:active:not(:disabled) { transform: scale(0.97); }
+  .option-btn:disabled { cursor: default; }
+
+  .opt-A { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+  .opt-B { background: linear-gradient(135deg, #2980b9, #1a5f8a); }
+  .opt-C { background: linear-gradient(135deg, #f39c12, #d68910); }
+  .opt-D { background: linear-gradient(135deg, #27ae60, #1e8449); }
+
+  .opt-label {
+    background: rgba(255,255,255,0.25);
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 900;
+  }
+
+  .option-btn.correct { outline: 4px solid #2ecc71; filter: brightness(1.15); animation: pulse-correct 0.5s; }
+  .option-btn.wrong   { outline: 4px solid #e74c3c; opacity: 0.55; }
+  .option-btn.dim     { opacity: 0.35; }
+
+  @keyframes pulse-correct {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  /* ── REVEAL ── */
+  #reveal { gap: 20px; width: 100%; max-width: 760px; }
+
+  .reveal-card {
+    width: 100%;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 28px 24px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .reveal-emoji { font-size: 56px; margin-bottom: 10px; }
+  .reveal-result { font-size: 26px; font-weight: 900; margin-bottom: 6px; }
+  .reveal-result.ok { color: #2ecc71; }
+  .reveal-result.fail { color: #e74c3c; }
+
+  .fun-fact {
+    margin-top: 18px;
+    background: rgba(245,166,35,0.12);
+    border: 1px solid rgba(245,166,35,0.4);
+    border-radius: 14px;
+    padding: 16px 20px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #ffe08a;
+    text-align: left;
+  }
+  .fun-fact strong { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; display: block; margin-bottom: 6px; }
+
+  .pts-pop {
+    font-size: 40px; font-weight: 900; color: var(--gold);
+    animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+  @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── RESULTS ── */
+  #results { gap: 24px; text-align: center; }
+  .results-title { font-size: clamp(28px, 6vw, 44px); font-weight: 900; }
+  .results-score {
+    font-size: clamp(60px, 16vw, 96px);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 40px rgba(245,166,35,0.5);
+    line-height: 1;
+  }
+  .results-sub { font-size: 16px; color: var(--text-muted); }
+
+  .answers-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .answer-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 14px;
+    text-align: left;
+  }
+  .answer-icon { font-size: 20px; flex-shrink: 0; }
+  .answer-q { font-weight: 700; margin-bottom: 4px; }
+  .answer-detail { color: var(--text-muted); font-size: 13px; }
+  .answer-correct-text { color: #2ecc71; }
+
+  .confetti-wrap { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+
+  @media (max-width: 480px) {
+    .options-grid { grid-template-columns: 1fr; }
+    .option-btn { padding: 18px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── INTRO ── -->
+<div id="intro" class="screen active">
+  <div class="intro-icon">📜</div>
+  <div class="intro-title">聖經成書小測驗</div>
+  <div class="intro-sub">教會互動版 · 共 6 題</div>
+  <div class="intro-badge">
+    🕊️ 66卷書 · 約40位作者 · 約1,500年完成<br>
+    三種語言：希伯來文、亞蘭文、希臘文<br>
+    共同見證上帝的救恩
+  </div>
+  <button class="btn btn-primary" onclick="startQuiz()">開始測驗 🚀</button>
+</div>
+
+<!-- ── QUIZ ── -->
+<div id="quiz" class="screen">
+  <div class="top-bar">
+    <span class="q-counter" id="q-counter">1 / 6</span>
+    <div class="timer-wrap">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle class="timer-track" cx="32" cy="32" r="27"/>
+        <circle class="timer-ring" id="timer-ring" cx="32" cy="32" r="27"
+          stroke-dasharray="169.6" stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-text" id="timer-text">20</div>
+    </div>
+    <div class="score-badge">⭐ <span id="score-display">0</span></div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="question-card" id="question-text">問題</div>
+
+  <div class="options-grid" id="options-grid"></div>
+</div>
+
+<!-- ── REVEAL ── -->
+<div id="reveal" class="screen">
+  <div class="reveal-card">
+    <div class="reveal-emoji" id="reveal-emoji">🎉</div>
+    <div class="reveal-result" id="reveal-result">答對了！</div>
+    <div class="pts-pop" id="pts-pop" style="display:none">+1000</div>
+    <div class="fun-fact" id="fun-fact" style="display:none">
+      <strong>📖 你知道嗎？</strong>
+      <span id="fun-fact-text"></span>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()">下一題 →</button>
+</div>
+
+<!-- ── RESULTS ── -->
+<div id="results" class="screen">
+  <div class="results-title" id="results-title">🎊 測驗完成！</div>
+  <div class="results-score" id="results-score">0</div>
+  <div class="results-sub" id="results-sub">0 / 6 答對</div>
+  <div class="answers-list" id="answers-list"></div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+    <button class="btn btn-primary" onclick="restartQuiz()">再玩一次 🔄</button>
+    <button class="btn btn-sm" onclick="shareResult()">分享結果 📤</button>
+  </div>
+</div>
+
+<div class="confetti-wrap" id="confetti-wrap"></div>
+
+<script>
+const QUESTIONS = [
+  {
+    q: "🎯 聖經是一本書還是一本書庫？",
+    opts: ["一本書", "一本書庫（多卷合集）", "小說集", "歷史年表"],
+    correct: 1,
+    fact: "聖經是由 66 卷書組成的書庫，約 40 位作者，歷時約 1,500 年完成，原文使用希伯來文、亞蘭文和希臘文。"
+  },
+  {
+    q: "🎯 聖經共有幾卷？",
+    opts: ["39 卷", "27 卷", "66 卷", "73 卷"],
+    correct: 2,
+    fact: "舊約 39 卷，新約 27 卷，合計 66 卷。天主教聖經另包含次經，共 73 卷。"
+  },
+  {
+    q: "🎯 聖經完成歷經多久？",
+    opts: ["約 100 年", "約 500 年", "約 1,000 年", "約 1,500 年"],
+    correct: 3,
+    fact: "聖經的寫作橫跨約 1,500 年，跨越了大約 40 個世代，卻有著一貫的主題——上帝的救恩。"
+  },
+  {
+    q: "🎯 聖經約有多少位作者？",
+    opts: ["1 位", "12 位", "約 40 位", "100 位"],
+    correct: 2,
+    fact: "約 40 位作者背景各異，包括君王（大衛、所羅門）、先知、漁夫（彼得）、醫生（路加）等。"
+  },
+  {
+    q: "🎯 以下哪種職業的人「不包含」在聖經作者中？",
+    opts: ["漁夫", "醫生", "君王", "電腦工程師"],
+    correct: 3,
+    fact: "神使用各種背景的人來寫下聖經——電腦工程師要等幾千年後才出現！"
+  },
+  {
+    q: "🎯 聖經原文主要使用哪些語言？",
+    opts: ["中文、英文", "希伯來文、亞蘭文、希臘文", "拉丁文、希臘文", "希伯來文、拉丁文"],
+    correct: 1,
+    fact: "舊約主要以希伯來文寫成（另有少部分亞蘭文），新約幾乎全以當時的通用希臘文（Koine Greek）寫成。"
+  }
+];
+
+const TIMER_SECS = 20;
+const CIRCUMFERENCE = 2 * Math.PI * 27; // ~169.6
+
+let currentQ = 0;
+let score = 0;
+let correctCount = 0;
+let timer = null;
+let timeLeft = TIMER_SECS;
+let answered = false;
+let history = []; // { correct: bool, chosen: idx, q: string, correctOpt: string }
+
+const optColors = ['opt-A', 'opt-B', 'opt-C', 'opt-D'];
+const optLabels = ['A', 'B', 'C', 'D'];
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startQuiz() {
+  currentQ = 0; score = 0; correctCount = 0; history = [];
+  updateScoreDisplay();
+  showScreen('quiz');
+  loadQuestion();
+}
+
+function loadQuestion() {
+  answered = false;
+  const q = QUESTIONS[currentQ];
+
+  document.getElementById('q-counter').textContent = `${currentQ + 1} / ${QUESTIONS.length}`;
+  document.getElementById('progress-fill').style.width = `${(currentQ / QUESTIONS.length) * 100}%`;
+  document.getElementById('question-text').textContent = q.q;
+
+  const grid = document.getElementById('options-grid');
+  grid.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = `option-btn ${optColors[i]}`;
+    btn.innerHTML = `<span class="opt-label">${optLabels[i]}</span><span>${opt}</span>`;
+    btn.onclick = () => selectAnswer(i);
+    grid.appendChild(btn);
+  });
+
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timer);
+  timeLeft = TIMER_SECS;
+  updateTimerUI();
+  timer = setInterval(() => {
+    timeLeft--;
+    updateTimerUI();
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      if (!answered) timeUp();
+    }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  const ring = document.getElementById('timer-ring');
+  const txt = document.getElementById('timer-text');
+  const progress = timeLeft / TIMER_SECS;
+  ring.style.strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+  ring.style.stroke = timeLeft <= 5 ? '#e74c3c' : (timeLeft <= 10 ? '#f39c12' : '#f5a623');
+  txt.textContent = timeLeft;
+}
+
+function selectAnswer(idx) {
+  if (answered) return;
+  answered = true;
+  clearInterval(timer);
+
+  const q = QUESTIONS[currentQ];
+  const isCorrect = idx === q.correct;
+  const buttons = document.querySelectorAll('.option-btn');
+  const timePts = Math.round((timeLeft / TIMER_SECS) * 800) + 200; // 200–1000
+
+  buttons.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === idx && !isCorrect) btn.classList.add('wrong');
+    else if (i !== q.correct) btn.classList.add('dim');
+  });
+
+  history.push({ correct: isCorrect, chosen: idx, q: q.q, correctOpt: q.opts[q.correct] });
+
+  if (isCorrect) {
+    correctCount++;
+    score += timePts;
+    updateScoreDisplay();
+    launchConfetti();
+  }
+
+  setTimeout(() => showReveal(isCorrect, timePts, q.fact), 900);
+}
+
+function timeUp() {
+  answered = true;
+  const q = QUESTIONS[currentQ];
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.correct) btn.classList.add('correct');
+    else btn.classList.add('dim');
+  });
+  history.push({ correct: false, chosen: -1, q: q.q, correctOpt: q.opts[q.correct] });
+  setTimeout(() => showReveal(false, 0, q.fact), 800);
+}
+
+function showReveal(isCorrect, pts, fact) {
+  const emoji = document.getElementById('reveal-emoji');
+  const result = document.getElementById('reveal-result');
+  const ptsPop = document.getElementById('pts-pop');
+  const factEl = document.getElementById('fun-fact');
+  const factText = document.getElementById('fun-fact-text');
+  const nextBtn = document.getElementById('next-btn');
+
+  if (isCorrect) {
+    emoji.textContent = '🎉';
+    result.textContent = '答對了！';
+    result.className = 'reveal-result ok';
+    ptsPop.textContent = `+${pts}`;
+    ptsPop.style.display = 'block';
+  } else {
+    emoji.textContent = '😅';
+    result.textContent = '沒關係，繼續學習！';
+    result.className = 'reveal-result fail';
+    ptsPop.style.display = 'none';
+  }
+
+  if (fact) {
+    factEl.style.display = 'block';
+    factText.textContent = fact;
+  } else {
+    factEl.style.display = 'none';
+  }
+
+  nextBtn.textContent = currentQ < QUESTIONS.length - 1 ? '下一題 →' : '查看結果 🏆';
+  showScreen('reveal');
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ < QUESTIONS.length) {
+    showScreen('quiz');
+    loadQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function updateScoreDisplay() {
+  document.getElementById('score-display').textContent = score.toLocaleString();
+}
+
+function showResults() {
+  document.getElementById('progress-fill').style.width = '100%';
+  const pct = Math.round((correctCount / QUESTIONS.length) * 100);
+  let title, emoji;
+  if (pct === 100) { title = '🏆 完美滿分！太厲害了！'; emoji = '🏆'; }
+  else if (pct >= 80) { title = '🎊 答得很好！'; emoji = '🎊'; }
+  else if (pct >= 50) { title = '👍 不錯喔，繼續加油！'; emoji = '👍'; }
+  else { title = '📖 要再多讀讀聖經喔！'; emoji = '📖'; }
+
+  document.getElementById('results-title').textContent = title;
+  document.getElementById('results-score').textContent = score.toLocaleString();
+  document.getElementById('results-sub').textContent = `答對 ${correctCount} / ${QUESTIONS.length} 題（${pct}%）`;
+
+  const list = document.getElementById('answers-list');
+  list.innerHTML = '';
+  history.forEach((h, i) => {
+    const div = document.createElement('div');
+    div.className = 'answer-row';
+    div.innerHTML = `
+      <div class="answer-icon">${h.correct ? '✅' : '❌'}</div>
+      <div>
+        <div class="answer-q">Q${i+1}. ${h.q.replace(/^🎯\s*/, '')}</div>
+        <div class="answer-detail ${h.correct ? 'answer-correct-text' : ''}">
+          正確答案：${h.correctOpt}
+        </div>
+      </div>`;
+    list.appendChild(div);
+  });
+
+  if (pct === 100) launchConfetti(true);
+  showScreen('results');
+}
+
+function restartQuiz() {
+  document.getElementById('confetti-wrap').innerHTML = '';
+  startQuiz();
+}
+
+function shareResult() {
+  const txt = `📜 聖經成書小測驗\n我得了 ${score} 分，答對 ${correctCount}/${QUESTIONS.length} 題！\n快來挑戰看看吧！`;
+  if (navigator.share) {
+    navigator.share({ title: '聖經成書小測驗', text: txt }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(txt).then(() => alert('結果已複製到剪貼簿！'));
+  }
+}
+
+/* ── CONFETTI ── */
+function launchConfetti(big = false) {
+  const wrap = document.getElementById('confetti-wrap');
+  const count = big ? 80 : 30;
+  const colors = ['#f5a623','#e94560','#2ecc71','#3498db','#9b59b6','#fff'];
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    const size = Math.random() * 10 + 6;
+    el.style.cssText = `
+      position:absolute;
+      left:${Math.random() * 100}%;
+      top:-20px;
+      width:${size}px; height:${size}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
+      animation: fall ${1.5 + Math.random() * 2}s ease-in ${Math.random() * 0.5}s forwards;
+      opacity:0.9;
+    `;
+    wrap.appendChild(el);
+  }
+  setTimeout(() => { wrap.innerHTML = ''; }, 4000);
+}
+
+const style = document.createElement('style');
+style.textContent = `
+@keyframes fall {
+  to { transform: translateY(105vh) rotate(${Math.random()*720}deg); opacity:0; }
+}`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
