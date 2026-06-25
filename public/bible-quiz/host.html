@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎛️ 主持人控制台</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
 :root {
@@ -171,13 +170,17 @@ body { font-family:'Segoe UI','Microsoft JhengHei',sans-serif; background:var(--
         <div style="font-size:15px;color:var(--muted);margin-bottom:8px">請玩家掃描 QR 或輸入房號</div>
         <div class="lobby-code" id="lobby-code">------</div>
       </div>
-      <canvas id="qr-canvas" style="border-radius:10px;background:#fff;padding:8px" width="180" height="180"></canvas>
-      <div style="font-size:13px;color:var(--muted)" id="player-url-txt"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:520px">
+        <div id="player-url-txt" style="font-size:14px;color:var(--muted);word-break:break-all;text-align:center;padding:0 12px"></div>
+        <button class="btn btn-ghost" onclick="copyLink()" style="width:auto;padding:10px 28px;font-size:15px">
+          📋 複製玩家連結
+        </button>
+      </div>
       <div>
         <div style="font-size:15px;color:var(--muted);margin-bottom:6px">已加入玩家</div>
         <div class="lobby-count" id="lobby-count">0</div>
       </div>
-      <button class="btn btn-primary" style="max-width:300px" onclick="startGame()">🚀 開始遊戲</button>
+      <button class="btn btn-primary" style="max-width:300px" onclick="goToGameView()">📊 進入監控畫面</button>
     </div>
   </div>
 
@@ -279,15 +282,15 @@ let pollInterval = null;
 
 window.onload = async () => {
   roomId = generateRoomId();
-  await sb.from('rooms').insert({ id: roomId, status:'lobby', current_q:0 });
+  await sb.from('rooms').insert({ id: roomId, status:'question', current_q:0 });
 
   document.getElementById('room-label').textContent = roomId;
   document.getElementById('lobby-code').textContent = roomId;
 
   const url = `${PLAYER_BASE_URL}?room=${roomId}`;
   document.getElementById('player-url-txt').textContent = url;
-  QRCode.toCanvas(document.getElementById('qr-canvas'), url, { width:180, margin:1 });
 
+  setBadge('question', '進行中');
   subscribeChanges();
   pollInterval = setInterval(refreshStats, 3000);
 };
@@ -352,6 +355,12 @@ async function refreshStats() {
     div.innerHTML = `<div class="rank-no">${medals[i]??i+1}</div><div class="rank-name">${p.nickname}${p.completed?' ✅':' 🏃'}</div><div class="rank-score">${p.score}</div>`;
     rl.appendChild(div);
   });
+}
+
+async function goToGameView() {
+  setBadge('question', '進行中');
+  showView('v-game');
+  refreshStats();
 }
 
 async function startGame() {
