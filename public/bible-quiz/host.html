@@ -433,6 +433,15 @@ function reviewPrev() { if (reviewQIdx > 0) renderReviewQ(--reviewQIdx); }
 function reviewNext() { if (reviewQIdx < QUESTIONS.length-1) renderReviewQ(++reviewQIdx); }
 
 async function finishGame() {
+  // 檢查還有幾人未完成
+  const { data: players } = await sb.from('players').select('completed').eq('room_id', roomId);
+  if (players && players.length > 0) {
+    const notDone = players.filter(p => !p.completed).length;
+    if (notDone > 0) {
+      const ok = confirm(`還有 ${notDone} 人尚未完成所有題目，確定要公布最終排名並結束遊戲嗎？`);
+      if (!ok) return;
+    }
+  }
   clearInterval(pollInterval);
   await sb.from('rooms').update({ status:'finished' }).eq('id', roomId);
   setBadge('finished', '已結束');
