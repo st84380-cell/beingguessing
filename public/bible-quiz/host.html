@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎛️ 主持人控制台 · 聖經成書小測驗</title>
+<title>🎛️ 主持人控制台</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
 :root {
@@ -13,121 +14,118 @@
   --white:#e6edf3; --muted:#8b949e;
   --A:#e74c3c; --B:#2980b9; --C:#f39c12; --D:#27ae60;
 }
-body { font-family:'Segoe UI','Microsoft JhengHei',sans-serif; background:var(--bg); color:var(--white); min-height:100vh; padding:0; }
+body { font-family:'Segoe UI','Microsoft JhengHei',sans-serif; background:var(--bg); color:var(--white); min-height:100vh; }
 
-/* ── LAYOUT ── */
 .app { display:grid; grid-template-rows:60px 1fr; min-height:100vh; }
-.topbar { background:var(--card); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; }
-.topbar-title { font-size:18px; font-weight:800; }
+.topbar { background:var(--card); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; gap:12px; }
+.topbar-title { font-size:18px; font-weight:800; white-space:nowrap; }
 .topbar-room { font-size:22px; font-weight:900; color:var(--gold); letter-spacing:4px; }
-.topbar-actions { display:flex; gap:10px; align-items:center; }
+.topbar-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
-.main { display:grid; grid-template-columns:320px 1fr; height:calc(100vh - 60px); overflow:hidden; }
-.sidebar { border-right:1px solid var(--border); overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:16px; }
+.main { display:grid; grid-template-columns:300px 1fr; height:calc(100vh - 60px); overflow:hidden; }
+.sidebar { border-right:1px solid var(--border); overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:14px; }
 .content { overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:20px; }
 
-/* ── CARDS ── */
-.card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; }
-.card-title { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:12px; font-weight:700; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; }
+.card-title { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:10px; font-weight:700; }
 
-/* ── STAT CHIPS ── */
-.stat-row { display:flex; gap:10px; flex-wrap:wrap; }
-.stat-chip { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 16px; text-align:center; flex:1; min-width:80px; }
-.stat-num { font-size:28px; font-weight:900; color:var(--gold); }
-.stat-lbl { font-size:11px; color:var(--muted); }
+/* stat chips */
+.stat-row { display:flex; gap:8px; }
+.stat-chip { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:10px; text-align:center; flex:1; }
+.stat-num { font-size:26px; font-weight:900; }
+.stat-num.gold { color:var(--gold); }
+.stat-num.green { color:var(--green); }
+.stat-num.accent { color:var(--accent); }
+.stat-lbl { font-size:11px; color:var(--muted); margin-top:2px; }
 
-/* ── BUTTONS ── */
+/* progress bar for completion */
+.completion-bar { width:100%; height:10px; background:rgba(255,255,255,.08); border-radius:99px; overflow:hidden; margin-top:8px; }
+.completion-fill { height:100%; background:var(--green); border-radius:99px; transition:width .5s ease; }
+
+/* buttons */
 .btn { border:none; cursor:pointer; border-radius:10px; font-family:inherit; font-weight:700; transition:filter .15s, transform .1s; }
 .btn:active { transform:scale(.97); }
-.btn-big { width:100%; padding:16px; font-size:17px; }
-.btn-primary { background:var(--accent); color:#fff; }
-.btn-primary:hover { filter:brightness(1.1); }
-.btn-green { background:var(--green); color:#111; }
-.btn-green:hover { filter:brightness(1.1); }
-.btn-gold { background:var(--gold); color:#111; }
-.btn-ghost { background:rgba(255,255,255,.08); color:var(--white); padding:8px 16px; font-size:14px; }
+.btn:disabled { opacity:.4; cursor:default; }
+.btn-primary { background:var(--accent); color:#fff; padding:14px 20px; font-size:16px; width:100%; }
+.btn-primary:hover:not(:disabled) { filter:brightness(1.1); }
+.btn-green { background:var(--green); color:#111; padding:14px 20px; font-size:16px; width:100%; }
+.btn-green:hover:not(:disabled) { filter:brightness(1.05); }
+.btn-gold { background:var(--gold); color:#111; padding:14px 20px; font-size:16px; width:100%; }
+.btn-ghost { background:rgba(255,255,255,.08); color:var(--white); padding:8px 14px; font-size:13px; border-radius:8px; }
 .btn-ghost:hover { background:rgba(255,255,255,.14); }
-.btn-danger { background:#c0392b; color:#fff; padding:8px 16px; font-size:14px; }
-.btn:disabled { opacity:.45; cursor:default; }
+.btn-danger { background:#c0392b; color:#fff; padding:8px 14px; font-size:13px; border-radius:8px; }
 
-/* ── STATUS BADGE ── */
-.status-badge { display:inline-block; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:700; }
-.status-lobby    { background:rgba(245,166,35,.15); color:var(--gold); }
-.status-question { background:rgba(46,204,113,.15); color:var(--green); }
-.status-reveal   { background:rgba(52,152,219,.15); color:#3498db; }
-.status-board    { background:rgba(155,89,182,.15); color:#9b59b6; }
-.status-finished { background:rgba(231,76,60,.15); color:#e74c3c; }
+/* status badge */
+.badge { display:inline-block; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:700; }
+.badge-lobby    { background:rgba(245,166,35,.15); color:var(--gold); }
+.badge-question { background:rgba(46,204,113,.15); color:var(--green); }
+.badge-review   { background:rgba(52,152,219,.15); color:#3498db; }
+.badge-finished { background:rgba(231,76,60,.15); color:#e74c3c; }
 
-/* ── QUESTION CARD ── */
-.q-display { font-size:clamp(18px,2.5vw,26px); font-weight:700; line-height:1.5; margin-bottom:16px; }
-.opts-preview { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.opt-prev {
-  border-radius:10px; padding:12px 14px;
-  display:flex; align-items:center; gap:10px;
-  font-size:14px; font-weight:600; color:#fff;
-  position:relative;
-}
-.opt-prev-A { background:var(--A); }
-.opt-prev-B { background:var(--B); }
-.opt-prev-C { background:var(--C); }
-.opt-prev-D { background:var(--D); }
-.opt-prev.correct-opt { outline:2px solid #fff; }
+/* player list */
+.player-list { display:flex; flex-direction:column; gap:5px; max-height:260px; overflow-y:auto; }
+.player-row { display:flex; align-items:center; gap:8px; padding:7px 10px; background:rgba(255,255,255,.04); border-radius:8px; font-size:13px; }
+.player-nick { flex:1; font-weight:600; }
+.player-score { color:var(--gold); font-weight:700; font-size:12px; }
+.p-status { font-size:16px; }
+
+/* lobby */
+.lobby-center { display:flex; flex-direction:column; align-items:center; gap:24px; text-align:center; padding:20px 0; }
+.lobby-code { font-size:clamp(48px,8vw,72px); font-weight:900; color:var(--gold); letter-spacing:10px; }
+.lobby-count { font-size:56px; font-weight:900; color:var(--white); }
+
+/* question display */
+.q-display { font-size:clamp(18px,2.5vw,26px); font-weight:700; line-height:1.5; margin-bottom:14px; }
+.opts-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.opt-card { border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600; color:#fff; }
+.opt-card.A { background:var(--A); }
+.opt-card.B { background:var(--B); }
+.opt-card.C { background:var(--C); }
+.opt-card.D { background:var(--D); }
+.opt-card.correct-opt { outline:2px solid #fff; }
 .opt-lbl-sm { background:rgba(255,255,255,.25); border-radius:50%; width:26px; height:26px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; }
 
-/* ── BAR CHART ── */
+/* fact box in review mode */
+.fact-box { background:rgba(245,166,35,.1); border:1px solid rgba(245,166,35,.3); border-radius:12px; padding:16px; font-size:15px; line-height:1.7; color:#ffe08a; }
+.fact-box strong { font-size:12px; text-transform:uppercase; letter-spacing:1px; opacity:.7; display:block; margin-bottom:6px; }
+
+/* bar chart */
 .chart-wrap { display:flex; flex-direction:column; gap:8px; }
-.bar-row { display:flex; align-items:center; gap:10px; }
-.bar-label { width:24px; font-size:13px; font-weight:700; text-align:center; }
-.bar-track { flex:1; height:28px; background:rgba(255,255,255,.06); border-radius:6px; overflow:hidden; }
-.bar-fill { height:100%; border-radius:6px; transition:width .6s ease; display:flex; align-items:center; padding-left:10px; font-size:13px; font-weight:700; color:#fff; white-space:nowrap; }
-.bar-count { font-size:13px; color:var(--muted); min-width:32px; text-align:right; }
+.bar-row { display:flex; align-items:center; gap:8px; }
+.bar-label { width:20px; font-size:13px; font-weight:700; text-align:center; }
+.bar-track { flex:1; height:26px; background:rgba(255,255,255,.06); border-radius:6px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:6px; transition:width .6s ease; display:flex; align-items:center; padding-left:10px; font-size:12px; font-weight:700; color:#fff; }
+.bar-count { font-size:13px; color:var(--muted); min-width:36px; text-align:right; }
 
-/* ── PLAYER LIST ── */
-.player-list { display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto; }
-.player-row { display:flex; align-items:center; gap:10px; padding:8px 10px; background:rgba(255,255,255,.04); border-radius:8px; font-size:13px; }
-.player-nick { flex:1; font-weight:600; }
-.player-score { color:var(--gold); font-weight:700; }
-.player-ans { font-size:11px; }
-
-/* ── RANK ── */
+/* rank */
 .rank-list { display:flex; flex-direction:column; gap:8px; }
 .rank-row { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.05); border-radius:10px; padding:12px 14px; }
 .rank-no { font-size:20px; font-weight:900; width:32px; text-align:center; }
 .rank-name { flex:1; font-weight:700; }
 .rank-score { font-size:16px; font-weight:900; color:var(--gold); }
 
-/* ── QR ── */
-.qr-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; }
-#qr-canvas { border-radius:10px; background:#fff; padding:8px; }
+/* tab switcher for review mode */
+.tab-bar { display:flex; gap:8px; margin-bottom:16px; }
+.tab { border:none; cursor:pointer; border-radius:8px; padding:8px 16px; font-size:14px; font-weight:700; font-family:inherit; background:rgba(255,255,255,.08); color:var(--muted); transition:all .2s; }
+.tab.active { background:var(--accent); color:#fff; }
 
-/* ── PROGRESS ── */
-.step-dots { display:flex; gap:6px; justify-content:center; }
-.dot { width:10px; height:10px; border-radius:50%; background:var(--border); transition:background .3s; }
-.dot.done { background:var(--green); }
-.dot.current { background:var(--gold); }
+/* view switching */
+#v-lobby, #v-game, #v-review { display:none; }
+#v-lobby.active, #v-game.active, #v-review.active { display:contents; }
 
-/* ── LOBBY OVERLAY ── */
-#lobby-view, #game-view { display:none; }
-#lobby-view.active, #game-view.active { display:contents; }
-
-.lobby-center { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:28px; text-align:center; }
-.lobby-code { font-size:clamp(48px,10vw,80px); font-weight:900; color:var(--gold); letter-spacing:10px; }
-.lobby-count { font-size:56px; font-weight:900; }
-
-@media(max-width:768px) { .main { grid-template-columns:1fr; } .sidebar { display:none; } }
+@media(max-width:700px) { .main { grid-template-columns:1fr; } .sidebar { display:none; } }
 </style>
 </head>
 <body>
 <div class="app">
 
-<!-- TOP BAR -->
 <div class="topbar">
   <div class="topbar-title">🎛️ 主持人控制台</div>
   <div class="topbar-room" id="room-label">------</div>
   <div class="topbar-actions">
-    <span class="status-badge status-lobby" id="status-badge">等待中</span>
-    <button class="btn btn-ghost" onclick="copyLink()">📋 複製玩家連結</button>
-    <button class="btn btn-danger" onclick="endGame()">結束遊戲</button>
+    <span class="badge badge-lobby" id="status-badge">等待中</span>
+    <button class="btn btn-ghost" onclick="copyLink()">📋 複製連結</button>
+    <button class="btn btn-danger" onclick="finishGame()">結束遊戲</button>
   </div>
 </div>
 
@@ -135,23 +133,28 @@ body { font-family:'Segoe UI','Microsoft JhengHei',sans-serif; background:var(--
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-  <!-- Stats -->
   <div class="card">
-    <div class="card-title">即時統計</div>
+    <div class="card-title">即時狀態</div>
     <div class="stat-row">
-      <div class="stat-chip"><div class="stat-num" id="stat-players">0</div><div class="stat-lbl">玩家</div></div>
-      <div class="stat-chip"><div class="stat-num" id="stat-answered">0</div><div class="stat-lbl">已答題</div></div>
-      <div class="stat-chip"><div class="stat-num" id="stat-correct">0</div><div class="stat-lbl">答對</div></div>
+      <div class="stat-chip">
+        <div class="stat-num gold" id="stat-total">0</div>
+        <div class="stat-lbl">已加入</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num accent" id="stat-doing">0</div>
+        <div class="stat-lbl">進行中</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num green" id="stat-done">0</div>
+        <div class="stat-lbl">已完成</div>
+      </div>
     </div>
+    <div class="completion-bar" style="margin-top:10px">
+      <div class="completion-fill" id="completion-fill" style="width:0%"></div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center" id="completion-text">0 / 0 人完成</div>
   </div>
 
-  <!-- Progress dots -->
-  <div class="card">
-    <div class="card-title">題目進度</div>
-    <div class="step-dots" id="step-dots"></div>
-  </div>
-
-  <!-- Player list -->
   <div class="card" style="flex:1">
     <div class="card-title">玩家列表</div>
     <div class="player-list" id="player-list"></div>
@@ -161,308 +164,272 @@ body { font-family:'Segoe UI','Microsoft JhengHei',sans-serif; background:var(--
 <!-- CONTENT -->
 <div class="content">
 
-  <!-- LOBBY VIEW -->
-  <div id="lobby-view" class="active">
+  <!-- LOBBY -->
+  <div id="v-lobby" class="active">
     <div class="lobby-center">
       <div>
-        <div style="font-size:16px;color:var(--muted);margin-bottom:8px">玩家掃描 QR 或輸入房號加入</div>
+        <div style="font-size:15px;color:var(--muted);margin-bottom:8px">請玩家掃描 QR 或輸入房號</div>
         <div class="lobby-code" id="lobby-code">------</div>
       </div>
-      <div class="qr-wrap">
-        <canvas id="qr-canvas" width="180" height="180"></canvas>
-        <div style="font-size:13px;color:var(--muted)" id="player-link-disp"></div>
-      </div>
+      <canvas id="qr-canvas" style="border-radius:10px;background:#fff;padding:8px" width="180" height="180"></canvas>
+      <div style="font-size:13px;color:var(--muted)" id="player-url-txt"></div>
       <div>
-        <div style="font-size:16px;color:var(--muted);margin-bottom:4px">已加入玩家</div>
+        <div style="font-size:15px;color:var(--muted);margin-bottom:6px">已加入玩家</div>
         <div class="lobby-count" id="lobby-count">0</div>
       </div>
-      <button class="btn btn-primary btn-big" style="max-width:320px" onclick="startGame()">🚀 開始遊戲</button>
+      <button class="btn btn-primary" style="max-width:300px" onclick="startGame()">🚀 開始遊戲</button>
     </div>
   </div>
 
-  <!-- GAME VIEW -->
-  <div id="game-view">
-
-    <!-- Question display -->
+  <!-- GAME MONITOR -->
+  <div id="v-game">
+    <!-- completion summary -->
     <div class="card">
-      <div class="card-title" id="q-label">第 1 題 / 共 6 題</div>
-      <div class="q-display" id="q-display">—</div>
-      <div class="opts-preview" id="opts-preview"></div>
+      <div class="card-title">完成進度</div>
+      <div class="stat-row" style="gap:16px">
+        <div class="stat-chip" style="flex:1">
+          <div class="stat-num accent" id="g-doing">0</div>
+          <div class="stat-lbl">進行中 🏃</div>
+        </div>
+        <div class="stat-chip" style="flex:1">
+          <div class="stat-num green" id="g-done">0</div>
+          <div class="stat-lbl">已完成 ✅</div>
+        </div>
+      </div>
+      <div class="completion-bar" style="margin-top:12px">
+        <div class="completion-fill" id="g-fill" style="width:0%"></div>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px;text-align:center" id="g-pct-txt">等待玩家作答…</div>
     </div>
 
-    <!-- Answer distribution bar chart -->
+    <!-- action buttons -->
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-gold" id="btn-open-review" onclick="openReview()" style="flex:1">
+        📖 開始講解模式
+      </button>
+      <button class="btn btn-green" id="btn-finish" onclick="finishGame()" style="flex:1">
+        🏆 公布最終排名
+      </button>
+    </div>
+
+    <!-- leaderboard preview -->
     <div class="card">
-      <div class="card-title">作答分布</div>
-      <div class="chart-wrap" id="chart-wrap">
-        <div style="color:var(--muted);font-size:14px">等待玩家作答…</div>
+      <div class="card-title">目前排行（主持人視角，全部具名）</div>
+      <div class="rank-list" id="game-rank-list"></div>
+    </div>
+  </div>
+
+  <!-- REVIEW MODE -->
+  <div id="v-review">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:20px;font-weight:800">📖 講解模式</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="btn-prev-q" onclick="reviewPrev()">← 上一題</button>
+        <button class="btn btn-ghost" id="btn-next-q" onclick="reviewNext()">下一題 →</button>
+        <button class="btn btn-ghost" onclick="openReview(0)">回第一題</button>
       </div>
     </div>
 
-    <!-- Controls -->
-    <div style="display:flex;gap:12px;flex-wrap:wrap">
-      <button class="btn btn-gold btn-big" style="flex:1;min-width:180px" id="btn-reveal" onclick="revealAnswer()" disabled>
-        📊 公布答案
-      </button>
-      <button class="btn btn-green btn-big" style="flex:1;min-width:180px" id="btn-next" onclick="nextQuestion()" disabled>
-        下一題 →
-      </button>
+    <div class="card">
+      <div class="card-title" id="review-q-label">第 1 題 / 共 6 題</div>
+      <div class="q-display" id="review-q-text">—</div>
+      <div class="opts-grid" id="review-opts"></div>
     </div>
 
-    <!-- Leaderboard preview -->
-    <div class="card" id="board-card" style="display:none">
-      <div class="card-title">目前排行榜 <span style="color:var(--muted);font-size:11px">（只顯示第一名姓名）</span></div>
-      <div class="rank-list" id="host-rank-list"></div>
+    <div class="card" id="review-fact-card">
+      <div class="card-title">📖 知識補充</div>
+      <div class="fact-box">
+        <strong>你知道嗎？</strong>
+        <span id="review-fact-txt"></span>
+      </div>
     </div>
 
+    <div class="card">
+      <div class="card-title">本題作答分布</div>
+      <div class="chart-wrap" id="review-chart"></div>
+    </div>
+
+    <button class="btn btn-green" onclick="finishGame()" style="margin-top:4px">
+      🏆 公布最終排名
+    </button>
   </div>
+
 </div><!-- /content -->
 </div><!-- /main -->
 </div><!-- /app -->
 
-<!-- QR lib (simple, no external CDN needed — we draw manually or use qrcode.js) -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────
-const SUPABASE_URL     = 'https://yucarcuvfonsqxmdqfmy.supabase.co';
+const SUPABASE_URL      = 'https://yucarcuvfonsqxmdqfmy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1Y2FyY3V2Zm9uc3F4bWRxZm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjMzMTgsImV4cCI6MjA4OTMzOTMxOH0.2kzZnoDrn_1WuSXol8OBouQ4YmRzi13vCWws_0c5Eso';
-const PLAYER_BASE_URL  = 'YOUR_PLAYER_PAGE_URL'; // e.g. https://your-app.vercel.app/player.html
-// ────────────────────────────────────────────────────────────────
+const PLAYER_BASE_URL   = 'https://beingguessing.vercel.app/bible-quiz/player.html';
 
 const QUESTIONS = [
-  { q:"🎯 聖經是一本書還是一本書庫？", opts:["一本書","一本書庫（多卷合集）","小說集","歷史年表"], correct:1 },
-  { q:"🎯 聖經共有幾卷？", opts:["39 卷","27 卷","66 卷","73 卷"], correct:2 },
-  { q:"🎯 聖經完成歷經多久？", opts:["約 100 年","約 500 年","約 1,000 年","約 1,500 年"], correct:3 },
-  { q:"🎯 聖經約有多少位作者？", opts:["1 位","12 位","約 40 位","100 位"], correct:2 },
-  { q:"🎯 以下哪種職業「不包含」在聖經作者中？", opts:["漁夫","醫生","君王","電腦工程師"], correct:3 },
-  { q:"🎯 聖經原文主要使用哪些語言？", opts:["中文、英文","希伯來文、亞蘭文、希臘文","拉丁文、希臘文","希伯來文、拉丁文"], correct:1 }
+  { q:"🎯 聖經是一本書還是一本書庫？", opts:["一本書","一本書庫（多卷合集）","小說集","歷史年表"], correct:1, fact:"聖經是由 66 卷書組成的書庫，約 40 位作者，歷時約 1,500 年完成，原文使用希伯來文、亞蘭文和希臘文。" },
+  { q:"🎯 聖經共有幾卷？", opts:["39 卷","27 卷","66 卷","73 卷"], correct:2, fact:"舊約 39 卷，新約 27 卷，合計 66 卷。天主教聖經另包含次經，共 73 卷。" },
+  { q:"🎯 聖經完成歷經多久？", opts:["約 100 年","約 500 年","約 1,000 年","約 1,500 年"], correct:3, fact:"聖經的寫作橫跨約 1,500 年，跨越了大約 40 個世代，卻有著一貫的主題——上帝的救恩。" },
+  { q:"🎯 聖經約有多少位作者？", opts:["1 位","12 位","約 40 位","100 位"], correct:2, fact:"約 40 位作者背景各異，包括君王（大衛、所羅門）、先知、漁夫（彼得）、醫生（路加）等。" },
+  { q:"🎯 以下哪種職業「不包含」在聖經作者中？", opts:["漁夫","醫生","君王","電腦工程師"], correct:3, fact:"神使用各種背景的人來寫下聖經——電腦工程師要等幾千年後才出現！" },
+  { q:"🎯 聖經原文主要使用哪些語言？", opts:["中文、英文","希伯來文、亞蘭文、希臘文","拉丁文、希臘文","希伯來文、拉丁文"], correct:1, fact:"舊約主要以希伯來文寫成（另有少部分亞蘭文），新約幾乎全以當時的通用希臘文（Koine Greek）寫成。" }
 ];
-const OPT_COLORS_CSS = ['var(--A)','var(--B)','var(--C)','var(--D)'];
-const OPT_LABELS = ['A','B','C','D'];
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 let roomId = '';
-let currentQ = 0;
-let playerCount = 0;
+let reviewQIdx = 0;
 let pollInterval = null;
 
-// ── INIT ────────────────────────────────────────────────────────
 window.onload = async () => {
   roomId = generateRoomId();
-  // 建立 room
   await sb.from('rooms').insert({ id: roomId, status:'lobby', current_q:0 });
 
   document.getElementById('room-label').textContent = roomId;
   document.getElementById('lobby-code').textContent = roomId;
 
-  const playerUrl = `${PLAYER_BASE_URL}?room=${roomId}`;
-  document.getElementById('player-link-disp').textContent = playerUrl;
-  QRCode.toCanvas(document.getElementById('qr-canvas'), playerUrl, { width:180, margin:1 });
+  const url = `${PLAYER_BASE_URL}?room=${roomId}`;
+  document.getElementById('player-url-txt').textContent = url;
+  QRCode.toCanvas(document.getElementById('qr-canvas'), url, { width:180, margin:1 });
 
-  buildStepDots();
-  subscribeRoom();
-  pollAnswers(); // poll every 2s for answer distribution
+  subscribeChanges();
+  pollInterval = setInterval(refreshStats, 3000);
 };
 
 function generateRoomId() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({ length:6 }, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  return Array.from({length:6}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
 }
 
-function buildStepDots() {
-  const wrap = document.getElementById('step-dots');
-  wrap.innerHTML = '';
-  QUESTIONS.forEach((_, i) => {
-    const d = document.createElement('div');
-    d.className = 'dot' + (i === 0 ? ' current' : '');
-    d.id = `dot-${i}`;
-    wrap.appendChild(d);
-  });
+function showView(id) {
+  ['v-lobby','v-game','v-review'].forEach(v => document.getElementById(v).classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
 
-// ── SUPABASE REALTIME ────────────────────────────────────────────
-function subscribeRoom() {
-  sb.channel('host-room:' + roomId)
-    .on('postgres_changes', { event:'INSERT', schema:'public', table:'players', filter:`room_id=eq.${roomId}` }, () => refreshPlayers())
-    .on('postgres_changes', { event:'INSERT', schema:'public', table:'answers', filter:`room_id=eq.${roomId}` }, () => refreshAnswerStats())
+function subscribeChanges() {
+  sb.channel('host:' + roomId)
+    .on('postgres_changes', { event:'*', schema:'public', table:'players', filter:`room_id=eq.${roomId}` }, refreshStats)
+    .on('postgres_changes', { event:'*', schema:'public', table:'answers', filter:`room_id=eq.${roomId}` }, refreshStats)
     .subscribe();
 }
 
-async function refreshPlayers() {
-  const { data } = await sb.from('players').select('id,nickname,score').eq('room_id', roomId).order('score', { ascending:false });
-  playerCount = data?.length ?? 0;
-  document.getElementById('stat-players').textContent = playerCount;
-  document.getElementById('lobby-count').textContent = playerCount;
+async function refreshStats() {
+  const { data: players } = await sb.from('players').select('id,nickname,score,completed').eq('room_id', roomId).order('score', { ascending:false });
+  if (!players) return;
 
+  const total = players.length;
+  const done  = players.filter(p => p.completed).length;
+  const doing = total - done;
+
+  // sidebar
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-doing').textContent = doing;
+  document.getElementById('stat-done').textContent  = done;
+  document.getElementById('lobby-count').textContent = total;
+
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('completion-fill').style.width = pct + '%';
+  document.getElementById('completion-text').textContent = `${done} / ${total} 人完成`;
+
+  // game view
+  document.getElementById('g-doing').textContent = doing;
+  document.getElementById('g-done').textContent  = done;
+  document.getElementById('g-fill').style.width  = pct + '%';
+  document.getElementById('g-pct-txt').textContent = total > 0 ? `${done} / ${total} 人完成（${pct}%）` : '等待玩家作答…';
+
+  // player list (sidebar)
   const list = document.getElementById('player-list');
   list.innerHTML = '';
-  (data ?? []).forEach(p => {
+  players.forEach(p => {
     const div = document.createElement('div');
     div.className = 'player-row';
-    div.id = `pl-${p.id}`;
-    div.innerHTML = `<span class="player-nick">${p.nickname}</span><span class="player-score">${p.score}</span><span class="player-ans" id="ans-${p.id}"></span>`;
+    div.innerHTML = `<span class="p-status">${p.completed ? '✅' : '🏃'}</span><span class="player-nick">${p.nickname}</span><span class="player-score">${p.score} 分</span>`;
     list.appendChild(div);
+  });
+
+  // leaderboard
+  const rl = document.getElementById('game-rank-list');
+  rl.innerHTML = '';
+  const medals = ['🥇','🥈','🥉'];
+  players.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'rank-row';
+    div.innerHTML = `<div class="rank-no">${medals[i]??i+1}</div><div class="rank-name">${p.nickname}${p.completed?' ✅':' 🏃'}</div><div class="rank-score">${p.score}</div>`;
+    rl.appendChild(div);
   });
 }
 
-async function refreshAnswerStats() {
-  const { data } = await sb.from('answers').select('chosen,is_correct,player_id').eq('room_id', roomId).eq('question_idx', currentQ);
-  if (!data) return;
-
-  const counts = [0,0,0,0];
-  let correct = 0;
-  data.forEach(a => { if (a.chosen >= 0) counts[a.chosen]++; if (a.is_correct) correct++; });
-  const total = data.length;
-
-  document.getElementById('stat-answered').textContent = total;
-  document.getElementById('stat-correct').textContent = correct;
-
-  renderChart(counts, total);
-  updatePlayerAnswerIcons(data);
-
-  // auto-enable reveal when everyone answered
-  if (total >= playerCount && playerCount > 0) {
-    document.getElementById('btn-reveal').disabled = false;
-  }
+async function startGame() {
+  await sb.from('rooms').update({ status:'question', current_q:0 }).eq('id', roomId);
+  setBadge('question', '進行中');
+  showView('v-game');
+  refreshStats();
 }
 
-function renderChart(counts, total) {
-  const wrap = document.getElementById('chart-wrap');
-  wrap.innerHTML = '';
-  const q = QUESTIONS[currentQ];
+function openReview(startIdx = 0) {
+  reviewQIdx = typeof startIdx === 'number' ? startIdx : 0;
+  setBadge('review', '講解中');
+  showView('v-review');
+  renderReviewQ(reviewQIdx);
+}
+
+async function renderReviewQ(qIdx) {
+  const q = QUESTIONS[qIdx];
+  document.getElementById('review-q-label').textContent = `第 ${qIdx+1} 題 / 共 ${QUESTIONS.length} 題`;
+  document.getElementById('review-q-text').textContent = q.q;
+  document.getElementById('review-fact-txt').textContent = q.fact ?? '';
+  document.getElementById('btn-prev-q').disabled = qIdx === 0;
+  document.getElementById('btn-next-q').disabled = qIdx === QUESTIONS.length - 1;
+
+  // options
+  const opts = document.getElementById('review-opts');
+  opts.innerHTML = '';
+  ['A','B','C','D'].forEach((lbl, i) => {
+    const div = document.createElement('div');
+    div.className = `opt-card ${lbl}${i===q.correct?' correct-opt':''}`;
+    div.innerHTML = `<span class="opt-lbl-sm">${lbl}</span><span style="flex:1">${q.opts[i]}</span>${i===q.correct?'<span>✓</span>':''}`;
+    opts.appendChild(div);
+  });
+
+  // bar chart for this question
+  const { data: ans } = await sb.from('answers').select('chosen,is_correct').eq('room_id', roomId).eq('question_idx', qIdx);
+  const counts = [0,0,0,0];
+  (ans??[]).forEach(a => { if (a.chosen >= 0) counts[a.chosen]++; });
+  const total = (ans??[]).length;
+
+  const chart = document.getElementById('review-chart');
+  chart.innerHTML = '';
+  const colors = ['var(--A)','var(--B)','var(--C)','var(--D)'];
   counts.forEach((c, i) => {
-    const pct = total > 0 ? Math.round((c / total) * 100) : 0;
+    const pct = total > 0 ? Math.round(c/total*100) : 0;
     const isCorrect = i === q.correct;
     const row = document.createElement('div');
     row.className = 'bar-row';
     row.innerHTML = `
-      <div class="bar-label" style="color:${OPT_COLORS_CSS[i]}">${OPT_LABELS[i]}</div>
+      <div class="bar-label" style="color:${colors[i]}">${['A','B','C','D'][i]}</div>
       <div class="bar-track">
-        <div class="bar-fill" style="width:${pct}%;background:${isCorrect ? 'var(--green)' : OPT_COLORS_CSS[i]}">
-          ${pct > 8 ? pct + '%' : ''}
+        <div class="bar-fill" style="width:${pct}%;background:${isCorrect?'var(--green)':colors[i]}">
+          ${pct>8?pct+'%':''}
         </div>
       </div>
       <div class="bar-count">${c} 人</div>`;
-    wrap.appendChild(row);
+    chart.appendChild(row);
   });
 }
 
-function updatePlayerAnswerIcons(data) {
-  data.forEach(a => {
-    const el = document.getElementById(`ans-${a.player_id}`);
-    if (el) el.textContent = a.is_correct ? '✅' : '❌';
-  });
-}
+function reviewPrev() { if (reviewQIdx > 0) renderReviewQ(--reviewQIdx); }
+function reviewNext() { if (reviewQIdx < QUESTIONS.length-1) renderReviewQ(++reviewQIdx); }
 
-function pollAnswers() {
-  pollInterval = setInterval(refreshAnswerStats, 2000);
-}
-
-// ── GAME CONTROL ─────────────────────────────────────────────────
-async function startGame() {
-  await refreshPlayers();
-  if (playerCount === 0) { if (!confirm('還沒有玩家加入，確定開始？')) return; }
-
-  currentQ = 0;
-  await sb.from('rooms').update({ status:'question', current_q:0 }).eq('id', roomId);
-
-  setStatus('question', '進行中');
-  showGameView();
-  loadHostQuestion(0);
-}
-
-function showGameView() {
-  document.getElementById('lobby-view').classList.remove('active');
-  document.getElementById('game-view').classList.add('active');
-}
-
-function loadHostQuestion(qIdx) {
-  const q = QUESTIONS[qIdx];
-  document.getElementById('q-label').textContent = `第 ${qIdx+1} 題 / 共 ${QUESTIONS.length} 題`;
-  document.getElementById('q-display').textContent = q.q;
-
-  // options preview
-  const prev = document.getElementById('opts-preview');
-  prev.innerHTML = '';
-  q.opts.forEach((opt, i) => {
-    const div = document.createElement('div');
-    div.className = `opt-prev opt-prev-${OPT_LABELS[i]}${i===q.correct?' correct-opt':''}`;
-    div.innerHTML = `<span class="opt-lbl-sm">${OPT_LABELS[i]}</span><span>${opt}</span>${i===q.correct?'<span style="margin-left:auto">✓</span>':''}`;
-    prev.appendChild(div);
-  });
-
-  // reset chart
-  document.getElementById('chart-wrap').innerHTML = '<div style="color:var(--muted);font-size:14px">等待玩家作答…</div>';
-  document.getElementById('stat-answered').textContent = 0;
-  document.getElementById('stat-correct').textContent = 0;
-  document.getElementById('btn-reveal').disabled = false; // host can reveal anytime
-  document.getElementById('btn-next').disabled = true;
-  document.getElementById('board-card').style.display = 'none';
-
-  // update step dots
-  QUESTIONS.forEach((_, i) => {
-    const d = document.getElementById(`dot-${i}`);
-    if (!d) return;
-    d.className = 'dot' + (i < qIdx ? ' done' : i === qIdx ? ' current' : '');
-  });
-}
-
-async function revealAnswer() {
-  await sb.from('rooms').update({ status:'reveal' }).eq('id', roomId);
-  document.getElementById('btn-reveal').disabled = true;
-  document.getElementById('btn-next').disabled = false;
-  setStatus('reveal', '公布答案');
-
-  // show leaderboard preview
-  await refreshLeaderboard();
-  document.getElementById('board-card').style.display = 'block';
-}
-
-async function nextQuestion() {
-  currentQ++;
-  if (currentQ >= QUESTIONS.length) {
-    await endGame();
-    return;
-  }
-  await sb.from('rooms').update({ status:'question', current_q:currentQ }).eq('id', roomId);
-  setStatus('question', '進行中');
-  loadHostQuestion(currentQ);
-}
-
-async function endGame() {
+async function finishGame() {
   clearInterval(pollInterval);
   await sb.from('rooms').update({ status:'finished' }).eq('id', roomId);
-  setStatus('finished', '已結束');
-  await refreshLeaderboard();
-  document.getElementById('board-card').style.display = 'block';
-  document.getElementById('btn-reveal').disabled = true;
-  document.getElementById('btn-next').disabled = true;
+  setBadge('finished', '已結束');
 }
 
-async function refreshLeaderboard() {
-  const { data } = await sb.from('players').select('nickname,score').eq('room_id', roomId).order('score', { ascending:false }).limit(10);
-  const list = document.getElementById('host-rank-list');
-  list.innerHTML = '';
-  const medals = ['🥇','🥈','🥉'];
-  (data ?? []).forEach((p, i) => {
-    const div = document.createElement('div');
-    div.className = 'rank-row';
-    // 主持人看到所有名字；玩家端只有第一名具名
-    div.innerHTML = `<div class="rank-no">${medals[i]??i+1}</div><div class="rank-name">${p.nickname}</div><div class="rank-score">${p.score}</div>`;
-    list.appendChild(div);
-  });
-}
-
-// ── UTILS ────────────────────────────────────────────────────────
-function setStatus(key, label) {
-  const badge = document.getElementById('status-badge');
-  badge.textContent = label;
-  badge.className = `status-badge status-${key}`;
+function setBadge(key, label) {
+  const b = document.getElementById('status-badge');
+  b.textContent = label;
+  b.className = `badge badge-${key}`;
 }
 
 function copyLink() {
   const url = `${PLAYER_BASE_URL}?room=${roomId}`;
-  navigator.clipboard.writeText(url).then(() => alert('玩家連結已複製！\n' + url));
+  navigator.clipboard.writeText(url).then(() => alert('連結已複製！\n' + url));
 }
 </script>
 </body>
