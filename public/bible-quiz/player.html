@@ -256,9 +256,17 @@ async function joinGame() {
   if (error) return alert('加入失敗：' + error.message);
   playerId = data.id;
   document.getElementById('room-display').textContent = roomId;
-  show('s-lobby');
   subscribeRoom();
   fetchPlayerCount();
+  // 如果房間已經開始，直接進入答題
+  const { data: room } = await sb.from('rooms').select('status,current_q').eq('id', roomId).single();
+  if (room && room.status === 'question') {
+    loadQuestion(room.current_q);
+  } else if (room && room.status === 'finished') {
+    alert('這場遊戲已結束');
+  } else {
+    show('s-lobby');
+  }
 }
 
 async function fetchPlayerCount() {
@@ -275,9 +283,8 @@ function subscribeRoom() {
 
 function handleRoomUpdate(payload) {
   const room = payload.new;
-  if (room.status === 'question' && currentQIdx === 0 && !answered) {
-    // 第一題由主持人觸發
-    loadQuestion(0);
+  if (room.status === 'question') {
+    loadQuestion(room.current_q);
   }
   if (room.status === 'finished') showEnd();
 }
