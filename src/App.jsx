@@ -128,6 +128,10 @@ const CSS = `
   .fab { position: fixed; bottom: 24px; right: 24px; z-index: 999; background: #2a1f0f; color: #f5f0e8; border: none; border-radius: 999px; padding: 12px 20px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; transition: transform 0.15s; }
   .fab:hover { transform: translateY(-2px); }
 
+  /* Landing game cards */
+  .game-card { display: flex; align-items: center; gap: 16px; background: #fff; border-radius: 20px; padding: 20px 22px; cursor: pointer; border: 2px solid transparent; text-decoration: none; color: inherit; box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+  .game-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); border-color: #2a1f0f; }
+
   @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
   @keyframes revealPop { 0% { transform: scale(0.88); opacity: 0; } 70% { transform: scale(1.04); } 100% { transform: scale(1); opacity: 1; } }
@@ -143,6 +147,44 @@ function Spinner() {
     </div>
   )
 }
+
+// ── 新增：遊戲選單首頁 ──────────────────────────────────────
+function Landing({ onEnterGuess }) {
+  return (
+    <div className="screen center">
+      <div className="inner" style={{ paddingTop:'2rem' }}>
+        <div style={{ textAlign:'center', marginBottom:'2.5rem' }}>
+          <div style={{ fontSize:'3rem', marginBottom:'0.75rem' }}>🎮</div>
+          <h1 className="serif" style={{ fontSize:'2.5rem', color:'#2a1f0f', lineHeight:1.1, marginBottom:'0.5rem' }}>Joint 611</h1>
+          <p className="muted">教會互動遊戲平台</p>
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+          <button className="game-card" onClick={onEnterGuess} style={{ border:'none', width:'100%', textAlign:'left', fontFamily:'inherit' }}>
+            <span style={{ fontSize:'2.4rem', flexShrink:0 }}>🎭</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:'1.05rem', fontWeight:700, color:'#2a1f0f', marginBottom:'3px' }}>破冰猜謎</div>
+              <div style={{ fontSize:'0.82rem', color:'#8c7355', lineHeight:1.5 }}>每人寫下 5 個特質，大家猜猜看描述的是誰</div>
+            </div>
+            <span style={{ color:'#ccc', fontSize:'1.2rem' }}>→</span>
+          </button>
+
+          <a className="game-card" href="/bible-quiz/player.html" style={{ textDecoration:'none' }}>
+            <span style={{ fontSize:'2.4rem', flexShrink:0 }}>📜</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:'1.05rem', fontWeight:700, color:'#2a1f0f', marginBottom:'3px' }}>聖經成書小測驗</div>
+              <div style={{ fontSize:'0.82rem', color:'#8c7355', lineHeight:1.5 }}>6 題互動問答，認識聖經是如何形成的</div>
+            </div>
+            <span style={{ color:'#ccc', fontSize:'1.2rem' }}>→</span>
+          </a>
+        </div>
+
+        <p style={{ textAlign:'center', fontSize:'0.75rem', color:'#bfb09e', marginTop:'2.5rem', fontFamily:'DM Mono, monospace' }}>Joint 611 · 教會破冰活動</p>
+      </div>
+    </div>
+  )
+}
+// ────────────────────────────────────────────────────────────
 
 function Home({ onMode }) {
   const [showGuide, setShowGuide] = useState(false)
@@ -212,10 +254,6 @@ function Home({ onMode }) {
                   </div>
                 ))}
               </div>
-              <div style={{ marginTop:'1rem', padding:'10px 14px', background:'#f9f6f1',
-                borderRadius:10, fontSize:'0.8rem', color:'#8c7355', lineHeight:1.6 }}>
-                💡 重新整理頁面不會遺失狀態，可隨時回到控制台
-              </div>
             </div>
 
             <div className="card">
@@ -234,10 +272,6 @@ function Home({ onMode }) {
                     <p style={{ fontSize:'0.88rem', color:'#5a4a35', lineHeight:1.6 }}>{text}</p>
                   </div>
                 ))}
-              </div>
-              <div style={{ marginTop:'1rem', padding:'10px 14px', background:'#f9f6f1',
-                borderRadius:10, fontSize:'0.8rem', color:'#8c7355', lineHeight:1.6 }}>
-                💡 填寫完後等待小組長開始，無需一直盯著畫面
               </div>
             </div>
           </div>
@@ -356,13 +390,11 @@ function HostDashboard({ code, initialRoom, myName, hostAsGuest, onJoinAsGuest, 
           <span className="badge">主持人控制台</span>
           <h2 className="serif" style={{ fontSize:'1.8rem', color:'#2a1f0f', marginTop:'0.6rem' }}>房間狀態</h2>
         </div>
-
         <div className="room-box" style={{ marginBottom:'1.5rem' }}>
           <p style={{ color:'#c8b89a', fontSize:'0.75rem', fontFamily:'DM Mono, monospace', letterSpacing:'0.2em', marginBottom:'0.4rem' }}>ROOM CODE</p>
           <div className="room-code">{code}</div>
           <p style={{ color:'#8c7355', fontSize:'0.8rem', marginTop:'0.6rem' }}>組員打開網站，輸入此代碼加入</p>
         </div>
-
         {!hostAsGuest && (
           <div className="card" style={{ marginBottom:'1.5rem', background:'#fffbf5', border:'1.5px solid #e8d9b8' }}>
             {!showJoin ? (
@@ -388,14 +420,12 @@ function HostDashboard({ code, initialRoom, myName, hostAsGuest, onJoinAsGuest, 
             )}
           </div>
         )}
-
         {hostAsGuest && (
           <div className="card" style={{ marginBottom:'1.5rem', background:'#e8f5e8', border:'1.5px solid #b8deb8' }}>
             <p style={{ fontSize:'0.85rem', color:'#2d8a2d', fontWeight:600 }}>✓ 你已加入遊戲（{myName}）</p>
             <p className="muted" style={{ fontSize:'0.78rem', marginTop:'4px' }}>使用右下角按鈕切換到組員畫面</p>
           </div>
         )}
-
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'1.5rem' }}>
           {[{ label:'已抽籤', val:drawn, total:room.names.length }, { label:'已填特質', val:filled, total:room.names.length }].map(({ label, val, total }) => (
             <div key={label} className="card" style={{ textAlign:'center' }}>
@@ -404,7 +434,6 @@ function HostDashboard({ code, initialRoom, myName, hostAsGuest, onJoinAsGuest, 
             </div>
           ))}
         </div>
-
         <div className="card" style={{ marginBottom:'1.5rem' }}>
           <p style={{ fontWeight:600, color:'#2a1f0f', marginBottom:'1rem' }}>組員狀態</p>
           <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
@@ -418,7 +447,6 @@ function HostDashboard({ code, initialRoom, myName, hostAsGuest, onJoinAsGuest, 
             ))}
           </div>
         </div>
-
         <button className="btn btn-dark btn-full" disabled={!allDone} onClick={startReveal}>
           {allDone ? '開始猜謎 →' : `等待所有人填寫（${filled}/${room.names.length}）`}
         </button>
@@ -785,6 +813,8 @@ function HostReveal({ room, onReset }) {
 
 export default function App() {
   const saved = loadSession()
+  // landing = 選單首頁, guess = 破冰猜謎
+  const [page, setPage] = useState(saved.mode ? 'guess' : 'landing')
   const [mode, setMode] = useState(saved.mode || null)
   const [roomCode, setRoomCode] = useState(saved.roomCode || null)
   const [myName, setMyName] = useState(saved.myName || null)
@@ -813,6 +843,7 @@ export default function App() {
     setMode(null); setRoomCode(null); setMyName(null); setRoom(null)
     setHostStep('setup'); setGuestStep('draw')
     setHostAsGuest(false); setShowingGuestView(false)
+    setPage('landing')
   }
 
   const isHostInGuestView = mode === 'host' && hostAsGuest && showingGuestView
@@ -834,22 +865,28 @@ export default function App() {
         </button>
       )}
 
-      {!mode && <Home onMode={m => setMode(m)} />}
+      {/* 選單首頁 */}
+      {page === 'landing' && (
+        <Landing onEnterGuess={() => setPage('guess')} />
+      )}
 
-      {mode === 'host' && !isHostInGuestView && hostStep === 'setup' && (
+      {/* 破冰猜謎 */}
+      {page === 'guess' && !mode && (
+        <Home onMode={m => setMode(m)} />
+      )}
+      {page === 'guess' && mode === 'host' && !isHostInGuestView && hostStep === 'setup' && (
         <HostSetup onBack={reset} onCreated={(c, r) => { setRoomCode(c); setRoom(r); setHostStep('dashboard') }} />
       )}
-      {mode === 'host' && !isHostInGuestView && hostStep === 'dashboard' && (
+      {page === 'guess' && mode === 'host' && !isHostInGuestView && hostStep === 'dashboard' && (
         <HostDashboard
           code={roomCode} initialRoom={room} myName={myName} hostAsGuest={hostAsGuest}
           onJoinAsGuest={name => { setMyName(name); setHostAsGuest(true); setGuestStep('draw'); setShowingGuestView(true) }}
           onReveal={r => { setRoom(r); setHostStep('reveal') }}
         />
       )}
-      {mode === 'host' && !isHostInGuestView && hostStep === 'reveal' && (
+      {page === 'guess' && mode === 'host' && !isHostInGuestView && hostStep === 'reveal' && (
         <HostReveal room={room} onReset={reset} />
       )}
-
       {isHostInGuestView && guestStep === 'draw' && room && (
         <GuestDraw code={roomCode} myName={myName} room={room} onDone={() => setGuestStep('traits')} />
       )}
@@ -868,17 +905,16 @@ export default function App() {
           </div>
         </div>
       )}
-
-      {mode === 'guest' && !roomCode && (
+      {page === 'guess' && mode === 'guest' && !roomCode && (
         <GuestJoin onBack={reset} onJoined={(c, n, r) => { setRoomCode(c); setMyName(n); setRoom(r) }} />
       )}
-      {mode === 'guest' && roomCode && guestStep === 'draw' && room && (
+      {page === 'guess' && mode === 'guest' && roomCode && guestStep === 'draw' && room && (
         <GuestDraw code={roomCode} myName={myName} room={room} onDone={() => setGuestStep('traits')} />
       )}
-      {mode === 'guest' && roomCode && guestStep === 'traits' && room && (
+      {page === 'guess' && mode === 'guest' && roomCode && guestStep === 'traits' && room && (
         <GuestTraits code={roomCode} myName={myName} room={room} onDone={() => setGuestStep('wait')} />
       )}
-      {mode === 'guest' && roomCode && (guestStep === 'wait' || guestStep === 'done') && (
+      {page === 'guess' && mode === 'guest' && roomCode && (guestStep === 'wait' || guestStep === 'done') && (
         <GuestWaiting code={roomCode} />
       )}
     </>
