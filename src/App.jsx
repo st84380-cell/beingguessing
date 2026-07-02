@@ -169,14 +169,14 @@ function Landing({ onEnterGuess }) {
             <span style={{ color:'#ccc', fontSize:'1.2rem' }}>→</span>
           </button>
 
-          <a className="game-card" href="/bible-quiz/player.html" style={{ textDecoration:'none' }}>
-            <span style={{ fontSize:'2.4rem', flexShrink:0 }}>📜</span>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:'1.05rem', fontWeight:700, color:'#2a1f0f', marginBottom:'3px' }}>聖經成書小測驗</div>
-              <div style={{ fontSize:'0.82rem', color:'#8c7355', lineHeight:1.5 }}>6 題互動問答，認識聖經是如何形成的</div>
-            </div>
-            <span style={{ color:'#ccc', fontSize:'1.2rem' }}>→</span>
-          </a>
+<a className="game-card" href="/bible-story/player.html" style={{ textDecoration:'none' }}>
+  <span style={{ fontSize:'2.4rem', flexShrink:0 }}>📖</span>
+  <div style={{ flex:1 }}>
+    <div style={{ fontSize:'1.05rem', fontWeight:700, color:'#2a1f0f', marginBottom:'3px' }}>聖經大歷史</div>
+    <div style={{ fontSize:'0.82rem', color:'#8c7355', lineHeight:1.5 }}>時間軸排序 + 連連看，你在歷史的哪一段？</div>
+  </div>
+  <span style={{ color:'#ccc', fontSize:'1.2rem' }}>→</span>
+</a>
         </div>
 
         <p style={{ textAlign:'center', fontSize:'0.75rem', color:'#bfb09e', marginTop:'2.5rem', fontFamily:'DM Mono, monospace' }}>Joint 611 · 教會破冰活動</p>
