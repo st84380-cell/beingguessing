@@ -1,1 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎛️ 聖經大歷史 · 主持人</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;600;700&family=DM+Mono&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f0e8;--card:#fff;--dark:#2a1f0f;--brown:#8c7355;
+  --light:#ede6d8;--border:#e0d9ce;--green:#2d8a2d;
+  --A:#e74c3c;--B:#2980b9;--C:#f39c12;--D:#27ae60;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;position:sticky;top:0;z-index:10}
+.topbar-title{font-size:16px;font-weight:700}
+.room-code{font-family:'DM Mono',monospace;font-size:20px;font-weight:700;color:var(--brown);letter-spacing:4px}
+.topbar-actions{display:flex;gap:8px;align-items:center}
 
+.main{padding:20px 16px;max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+
+.card{background:var(--card);border-radius:16px;box-shadow:0 2px 16px rgba(0,0,0,.06);padding:20px}
+.card-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--brown);margin-bottom:12px;font-weight:700}
+.serif{font-family:'DM Serif Display',serif}
+
+/* stat */
+.stat-row{display:flex;gap:10px;flex-wrap:wrap}
+.stat-chip{flex:1;min-width:80px;background:var(--light);border-radius:12px;padding:12px;text-align:center}
+.stat-num{font-size:28px;font-weight:800;font-family:'DM Mono',monospace}
+.stat-lbl{font-size:11px;color:var(--brown);margin-top:2px}
+
+/* bar chart */
+.chart{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-label{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0}
+.bar-track{flex:1;height:32px;background:var(--light);border-radius:8px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:8px;transition:width .6s ease;display:flex;align-items:center;padding-left:12px;font-size:13px;font-weight:700;color:#fff;white-space:nowrap}
+.bar-pct{font-size:13px;color:var(--brown);min-width:40px;text-align:right;font-family:'DM Mono',monospace}
+.bar-count{font-size:12px;color:var(--brown);min-width:28px;text-align:right}
+
+/* player list */
+.player-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto}
+.player-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--light);border-radius:8px;font-size:13px}
+.player-name{flex:1;font-weight:600}
+.player-ans{font-weight:700;font-size:12px;padding:2px 8px;border-radius:99px;color:#fff}
+
+/* btn */
+.btn{border:none;cursor:pointer;border-radius:10px;font-family:inherit;font-weight:700;padding:10px 20px;font-size:14px;transition:filter .15s,transform .1s}
+.btn:active{transform:scale(.97)}
+.btn-dark{background:var(--dark);color:var(--bg)}
+.btn-dark:hover{filter:brightness(1.2)}
+.btn-ghost{background:var(--light);color:var(--dark)}
+.btn-ghost:hover{filter:brightness(.95)}
+.btn-red{background:#c0392b;color:#fff}
+
+/* lobby */
+.lobby-code{font-family:'DM Mono',monospace;font-size:clamp(40px,10vw,64px);font-weight:900;color:var(--dark);letter-spacing:10px;text-align:center;padding:24px 0}
+.player-join-count{font-size:48px;font-weight:900;text-align:center;color:var(--dark)}
+
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--brown);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* view switch */
+.view{display:none}
+.view.active{display:block}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">🎛️ 聖經大歷史 · 主持人</div>
+  <div class="room-code" id="room-label">------</div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost" onclick="copyLink()">📋 複製連結</button>
+    <button class="btn btn-red" onclick="endGame()">結束遊戲</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- LOBBY -->
+  <div class="view active" id="v-lobby">
+    <div class="card" style="text-align:center">
+      <p style="font-size:14px;color:var(--brown);margin-bottom:4px">請玩家輸入房號加入</p>
+      <div class="lobby-code" id="lobby-code">------</div>
+      <p style="font-size:13px;color:var(--brown);margin-bottom:16px" id="player-url-disp"></p>
+      <div style="margin-bottom:8px;font-size:14px;color:var(--brown)">已加入玩家</div>
+      <div class="player-join-count" id="lobby-count">0</div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">已加入玩家</div>
+      <div class="player-list" id="lobby-player-list"></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="view" id="v-stats">
+
+    <div class="card">
+      <div class="card-title">即時狀態</div>
+      <div class="stat-row">
+        <div class="stat-chip">
+          <div class="stat-num" id="stat-joined">0</div>
+          <div class="stat-lbl">已加入</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-num" id="stat-submitted">0</div>
+          <div class="stat-lbl">已完成</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-num" id="stat-pct">0%</div>
+          <div class="stat-lbl">完成率</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Q chart -->
+    <div class="card">
+      <div class="card-title">最後一題統計結果</div>
+      <div class="chart" id="final-chart">
+        <div style="color:var(--brown);font-size:14px">等待玩家作答…</div>
+      </div>
+    </div>
+
+    <!-- Player list with answers -->
+    <div class="card">
+      <div class="card-title">玩家作答明細（記名）</div>
+      <div class="player-list" id="answer-list">
+        <div style="color:var(--brown);font-size:14px">等待玩家作答…</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL      = 'https://yucarcuvfonsqxmdqfmy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1Y2FyY3V2Zm9uc3F4bWRxZm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjMzMTgsImV4cCI6MjA4OTMzOTMxOH0.2kzZnoDrn_1WuSXol8OBouQ4YmRzi13vCWws_0c5Eso';
+const PLAYER_URL = 'https://joint611.vercel.app/bible-story/player.html';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const FINAL_OPTIONS = {
+  A: { label:'A', text:'我對基督信仰很好奇，想多了解。',     color:'var(--A)' },
+  B: { label:'B', text:'我相信上帝，但還在慢慢認識祂。',   color:'var(--B)' },
+  C: { label:'C', text:'我有固定讀聖經，希望更深入了解神。', color:'var(--C)' },
+  D: { label:'D', text:'我想把更多學到的內容分享給身邊的人。', color:'var(--D)' },
+};
+
+let roomId = '';
+let pollInterval = null;
+let knownPlayers = new Set(); // for lobby
+
+window.onload = async () => {
+  roomId = generateRoomId();
+  await sb.from('story_rooms').insert({ id: roomId, status: 'active' });
+
+  document.getElementById('room-label').textContent = roomId;
+  document.getElementById('lobby-code').textContent = roomId;
+
+  const url = `${PLAYER_URL}?room=${roomId}`;
+  document.getElementById('player-url-disp').textContent = url;
+
+  subscribeAnswers();
+  pollInterval = setInterval(refreshAll, 3000);
+  refreshAll();
+
+  // After 30s auto-switch to stats view if players have joined
+  setTimeout(() => {
+    if (knownPlayers.size > 0) switchToStats();
+  }, 30000);
+};
+
+function generateRoomId() {
+  return Array.from({length:6}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+}
+
+function switchToStats() {
+  document.getElementById('v-lobby').classList.remove('active');
+  document.getElementById('v-stats').classList.add('active');
+}
+
+function subscribeAnswers() {
+  sb.channel('story-host:' + roomId)
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'story_answers', filter:`room_id=eq.${roomId}` }, () => refreshAll())
+    .subscribe();
+}
+
+async function refreshAll() {
+  // Players who have joined = those who have submitted answers (since they join at the start)
+  // Track via story_answers nicknname uniqueness
+  const { data: answers } = await sb.from('story_answers').select('nickname,q_final,submitted_at').eq('room_id', roomId).order('submitted_at');
+
+  const submitted = answers ?? [];
+  submitted.forEach(a => knownPlayers.add(a.nickname));
+
+  const total   = knownPlayers.size;
+  const subCount = submitted.length;
+  const pct = total > 0 ? Math.round(subCount / total * 100) : 0;
+
+  document.getElementById('lobby-count').textContent = total;
+  document.getElementById('stat-joined').textContent = total;
+  document.getElementById('stat-submitted').textContent = subCount;
+  document.getElementById('stat-pct').textContent = pct + '%';
+
+  // lobby player list
+  const lobbyList = document.getElementById('lobby-player-list');
+  lobbyList.innerHTML = '';
+  knownPlayers.forEach(name => {
+    const ans = submitted.find(a => a.nickname === name);
+    const div = document.createElement('div');
+    div.className = 'player-row';
+    div.innerHTML = `<span class="player-name">${name}</span><span>${ans ? '✅ 已完成' : '<span class="spinner"></span>'}</span>`;
+    lobbyList.appendChild(div);
+  });
+
+  // auto switch when first submission arrives
+  if (subCount > 0 && document.getElementById('v-lobby').classList.contains('active')) {
+    switchToStats();
+  }
+
+  // final chart
+  if (subCount > 0) {
+    const counts = {A:0, B:0, C:0, D:0};
+    submitted.forEach(a => { if (counts[a.q_final] !== undefined) counts[a.q_final]++; });
+
+    const chart = document.getElementById('final-chart');
+    chart.innerHTML = '';
+    Object.entries(FINAL_OPTIONS).forEach(([key, opt]) => {
+      const c = counts[key];
+      const pctBar = subCount > 0 ? Math.round(c / subCount * 100) : 0;
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `
+        <div class="bar-label" style="background:${opt.color}">${key}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--brown);margin-bottom:4px">${opt.text}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${pctBar}%;background:${opt.color}">
+              ${pctBar > 10 ? pctBar + '%' : ''}
+            </div>
+          </div>
+        </div>
+        <div class="bar-count">${c} 人</div>`;
+      chart.appendChild(row);
+    });
+  }
+
+  // answer list (具名)
+  const ansList = document.getElementById('answer-list');
+  if (submitted.length > 0) {
+    ansList.innerHTML = '';
+    submitted.forEach(a => {
+      const opt = FINAL_OPTIONS[a.q_final];
+      const div = document.createElement('div');
+      div.className = 'player-row';
+      div.innerHTML = `
+        <span class="player-name">${a.nickname}</span>
+        <span class="player-ans" style="background:${opt?.color ?? '#999'}">${a.q_final}</span>
+        <span style="font-size:12px;color:var(--brown);flex:1;padding-left:8px">${opt?.text ?? ''}</span>`;
+      ansList.appendChild(div);
+    });
+  }
+}
+
+async function endGame() {
+  if (!confirm('確定要結束這場遊戲嗎？')) return;
+  clearInterval(pollInterval);
+  await sb.from('story_rooms').update({ status:'finished' }).eq('id', roomId);
+  alert('遊戲已結束。');
+}
+
+function copyLink() {
+  const url = `${PLAYER_URL}?room=${roomId}`;
+  navigator.clipboard.writeText(url).then(() => alert('連結已複製！\n' + url));
+}
+</script>
+</body>
+</html>
