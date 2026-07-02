@@ -1,1 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📖 聖經大歷史</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f0e8; --card: #fff; --dark: #2a1f0f; --brown: #8c7355;
+  --light: #ede6d8; --border: #e0d9ce; --green: #2d8a2d; --red: #c0392b;
+  --muted: #bfb09e;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; }
+.screen { min-height: 100vh; padding: 24px 16px; display: flex; justify-content: center; }
+.inner { width: 100%; max-width: 520px; }
+.screen.active { display: flex; }
+.screen:not(.active) { display: none; }
 
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+@keyframes popIn { from { transform:scale(0.85); opacity:0; } to { transform:scale(1); opacity:1; } }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 60%{transform:translateX(6px)} }
+.fade-up { animation: fadeUp 0.35s ease both; }
+
+.serif { font-family: 'DM Serif Display', serif; }
+.badge { display:inline-flex; align-items:center; font-size:0.72rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--brown); padding:4px 12px; border-radius:999px; border:1px solid var(--border); background:var(--light); }
+.muted { color: var(--brown); font-size: 0.85rem; }
+
+.card { background: var(--card); border-radius: 20px; box-shadow: 0 2px 20px rgba(0,0,0,0.07); padding: 24px; }
+.inp { width:100%; background:#f9f6f1; border:1.5px solid var(--border); border-radius:10px; padding:12px 16px; font-family:'DM Sans',sans-serif; font-size:0.95rem; color:var(--dark); outline:none; transition:border-color 0.2s; }
+.inp:focus { border-color: var(--brown); }
+.inp::placeholder { color: var(--muted); }
+
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:none; border-radius:12px; padding:13px 24px; font-family:'DM Sans',sans-serif; font-size:0.95rem; font-weight:600; cursor:pointer; transition:transform 0.15s, box-shadow 0.15s, opacity 0.15s; }
+.btn:active:not(:disabled) { transform:scale(0.97); }
+.btn-dark { background:var(--dark); color:var(--bg); }
+.btn-dark:hover:not(:disabled) { box-shadow:0 4px 16px rgba(42,31,15,0.25); transform:translateY(-1px); }
+.btn-dark:disabled { opacity:0.35; cursor:not-allowed; }
+.btn-outline { background:transparent; border:1.5px solid var(--border); color:var(--brown); }
+.btn-outline:hover:not(:disabled) { border-color:var(--brown); background:var(--light); color:var(--dark); }
+.btn-full { width:100%; }
+
+/* ── STEP DOTS ── */
+.steps { display:flex; gap:8px; justify-content:center; margin-bottom:28px; }
+.step-dot { width:8px; height:8px; border-radius:50%; background:var(--border); transition:all 0.3s; }
+.step-dot.done { background:var(--green); }
+.step-dot.active { background:var(--dark); width:24px; border-radius:4px; }
+
+/* ── TIMELINE LABELS ── */
+.timeline-label {
+  display:flex; align-items:center; justify-content:center;
+  background:var(--light); border:1.5px solid var(--border); border-radius:10px;
+  padding:10px 14px; font-size:0.88rem; font-weight:600; color:var(--dark);
+  text-align:center; line-height:1.3;
+}
+
+/* ── DRAG SORT ── */
+.drag-list { display:flex; flex-direction:column; gap:8px; }
+.drag-item {
+  display:flex; align-items:center; gap:12px;
+  background:var(--card); border:1.5px solid var(--border); border-radius:12px;
+  padding:14px 16px; cursor:grab; user-select:none;
+  transition:box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+  font-size:0.95rem; font-weight:600;
+}
+.drag-item:active { cursor:grabbing; }
+.drag-item.dragging { opacity:0.5; box-shadow:0 8px 24px rgba(0,0,0,0.15); }
+.drag-item.drag-over { border-color:var(--dark); background:var(--light); }
+.drag-handle { color:var(--muted); font-size:1.1rem; flex-shrink:0; }
+.drag-num { width:24px; height:24px; border-radius:50%; background:var(--light); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:0.75rem; color:var(--brown); flex-shrink:0; }
+
+/* correct/wrong states */
+.drag-item.correct { border-color:#2d8a2d; background:#f0faf0; }
+.drag-item.wrong   { border-color:var(--red); background:#fdf0f0; animation: shake 0.4s; }
+
+/* ── CONNECT ── */
+.connect-wrap { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+.connect-col { display:flex; flex-direction:column; gap:8px; }
+.connect-item {
+  padding:12px 14px; border-radius:12px; border:1.5px solid var(--border);
+  background:var(--card); font-size:0.88rem; font-weight:600; cursor:pointer;
+  text-align:center; transition:all 0.2s; user-select:none; line-height:1.4;
+}
+.connect-item:hover { border-color:var(--brown); background:var(--light); }
+.connect-item.selected { background:var(--dark); color:var(--bg); border-color:var(--dark); }
+.connect-item.matched-ok { background:#f0faf0; border-color:#2d8a2d; color:#2d8a2d; cursor:default; }
+.connect-item.matched-err { background:#fdf0f0; border-color:var(--red); color:var(--red); animation:shake 0.4s; cursor:default; }
+.connect-line { display:flex; align-items:center; gap:8px; font-size:0.8rem; color:var(--brown); }
+
+/* ── RADIO OPTIONS ── */
+.radio-list { display:flex; flex-direction:column; gap:10px; }
+.radio-item {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:14px 16px; border-radius:12px; border:1.5px solid var(--border);
+  background:var(--card); cursor:pointer; transition:all 0.2s;
+}
+.radio-item:hover { border-color:var(--brown); background:var(--light); }
+.radio-item.selected { border-color:var(--dark); background:var(--light); }
+.radio-dot { width:18px; height:18px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; margin-top:2px; transition:all 0.2s; }
+.radio-item.selected .radio-dot { border-color:var(--dark); background:var(--dark); }
+.radio-text { font-size:0.92rem; line-height:1.5; color:var(--dark); }
+
+/* result feedback */
+.result-box { border-radius:14px; padding:16px 18px; font-size:0.9rem; line-height:1.6; }
+.result-ok  { background:#f0faf0; border:1.5px solid #b8deb8; color:#1a5c1a; }
+.result-err { background:#fdf0f0; border:1.5px solid #e8b8b8; color:#7a1a1a; }
+
+/* end screen */
+.end-choice {
+  padding:16px 18px; border-radius:14px; border:1.5px solid var(--border);
+  background:var(--card); cursor:pointer; transition:all 0.2s; margin-bottom:8px;
+}
+.end-choice:hover { border-color:var(--brown); background:var(--light); }
+.end-choice.selected { border-color:var(--dark); background:var(--dark); color:var(--bg); }
+.end-choice-label { font-size:0.8rem; font-weight:700; letter-spacing:0.1em; margin-bottom:4px; }
+.end-choice-text { font-size:0.9rem; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<!-- ① 輸入房號 + 暱稱 -->
+<div id="s-join" class="screen active">
+  <div class="inner" style="padding-top:2rem">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div style="font-size:3rem;margin-bottom:0.5rem">📖</div>
+      <h1 class="serif" style="font-size:2.2rem;color:var(--dark);margin-bottom:0.4rem">聖經大歷史</h1>
+      <p class="muted">從創造到新天新地，你在哪一段？</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:0.8rem;color:var(--brown);display:block;margin-bottom:6px">房號</label>
+        <input id="inp-room" class="inp" placeholder="輸入主持人提供的房號" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;font-size:1.2rem;text-align:center">
+      </div>
+      <div>
+        <label style="font-size:0.8rem;color:var(--brown);display:block;margin-bottom:6px">你的名字</label>
+        <input id="inp-name" class="inp" placeholder="輸入你的名字" maxlength="12">
+      </div>
+      <div id="join-err" style="color:var(--red);font-size:0.82rem;display:none"></div>
+      <button class="btn btn-dark btn-full" onclick="joinGame()">開始挑戰 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ② 第一關：排序 -->
+<div id="s-sort" class="screen">
+  <div class="inner">
+    <div class="steps" id="steps-1">
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+    <div style="margin-bottom:1.5rem">
+      <span class="badge">第一關</span>
+      <h2 class="serif" style="font-size:1.8rem;margin-top:0.5rem;margin-bottom:0.3rem">時間軸排序</h2>
+      <p class="muted">從最早到最晚，拖曳排列正確順序</p>
+    </div>
+    <div class="drag-list" id="drag-list"></div>
+    <div id="sort-feedback" style="margin-top:12px;display:none"></div>
+    <button class="btn btn-dark btn-full" style="margin-top:16px" id="btn-check-sort" onclick="checkSort()">確認順序</button>
+    <button class="btn btn-outline btn-full" style="margin-top:8px;display:none" id="btn-next-sort" onclick="goToConnect()">下一關 →</button>
+  </div>
+</div>
+
+<!-- ③ 第二關：連連看 -->
+<div id="s-connect" class="screen">
+  <div class="inner">
+    <div class="steps" id="steps-2">
+      <div class="step-dot done"></div>
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+    </div>
+    <div style="margin-bottom:1.5rem">
+      <span class="badge">第二關</span>
+      <h2 class="serif" style="font-size:1.8rem;margin-top:0.5rem;margin-bottom:0.3rem">這是哪一段？</h2>
+      <p class="muted">點選事件，再點選對應的時間段</p>
+    </div>
+    <div id="connect-status" style="font-size:0.82rem;color:var(--brown);margin-bottom:12px;text-align:center"></div>
+    <div class="connect-wrap">
+      <div class="connect-col" id="col-events"></div>
+      <div class="connect-col" id="col-periods"></div>
+    </div>
+    <div id="connect-result" style="margin-top:14px;display:flex;flex-direction:column;gap:6px"></div>
+    <button class="btn btn-dark btn-full" style="margin-top:16px;display:none" id="btn-next-connect" onclick="goToFinal()">完成關卡 →</button>
+  </div>
+</div>
+
+<!-- ④ 最終題：你在哪一段？ -->
+<div id="s-final" class="screen">
+  <div class="inner">
+    <div class="steps">
+      <div class="step-dot done"></div>
+      <div class="step-dot done"></div>
+      <div class="step-dot active"></div>
+    </div>
+    <div style="margin-bottom:1.5rem">
+      <span class="badge">最後一題</span>
+      <h2 class="serif" style="font-size:1.8rem;margin-top:0.5rem;margin-bottom:0.3rem">你現在在哪一段？</h2>
+      <p class="muted">沒有對錯，選一個最靠近你的描述</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px" id="final-options">
+      <div class="end-choice" onclick="selectFinal('A',this)">
+        <div class="end-choice-label" style="color:var(--brown)">🔹 A</div>
+        <div class="end-choice-text">我對基督信仰很好奇，想多了解。</div>
+      </div>
+      <div class="end-choice" onclick="selectFinal('B',this)">
+        <div class="end-choice-label" style="color:var(--brown)">🔹 B</div>
+        <div class="end-choice-text">我相信上帝，但還在慢慢認識祂。</div>
+      </div>
+      <div class="end-choice" onclick="selectFinal('C',this)">
+        <div class="end-choice-label" style="color:var(--brown)">🔹 C</div>
+        <div class="end-choice-text">我有固定讀聖經，希望更深入了解神。</div>
+      </div>
+      <div class="end-choice" onclick="selectFinal('D',this)">
+        <div class="end-choice-label" style="color:var(--brown)">🔹 D</div>
+        <div class="end-choice-text">我想把更多學到的內容分享給身邊的人。</div>
+      </div>
+    </div>
+    <button class="btn btn-dark btn-full" id="btn-submit-final" onclick="submitFinal()" disabled>送出 →</button>
+  </div>
+</div>
+
+<!-- ⑤ 完成 -->
+<div id="s-done" class="screen">
+  <div class="inner" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center;gap:20px">
+    <div style="font-size:4rem">🌿</div>
+    <h2 class="serif" style="font-size:2rem;color:var(--dark)">感謝你的參與！</h2>
+    <p class="muted" style="line-height:1.8;max-width:320px">
+      聖經是一個從創造到新天新地的大故事，<br>而你也是這個故事的一部分。
+    </p>
+    <div style="background:var(--light);border-radius:14px;padding:16px 20px;font-size:0.88rem;color:var(--brown);line-height:1.7;max-width:320px">
+      不管你現在在哪一段，<br>神都在尋找你、等待你。
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL      = 'https://yucarcuvfonsqxmdqfmy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1Y2FyY3V2Zm9uc3F4bWRxZm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjMzMTgsImV4cCI6MjA4OTMzOTMxOH0.2kzZnoDrn_1WuSXol8OBouQ4YmRzi13vCWws_0c5Eso';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── DATA ──────────────────────────────────────────────────────
+const CORRECT_ORDER = ['創造','墮落','應許','耶穌','教會','新天新地'];
+
+const CONNECT_PAIRS = [
+  { event:'伊甸園',         period:'創造' },
+  { event:'亞當夏娃吃果子', period:'墮落' },
+  { event:'神與亞伯拉罕立約', period:'應許' },
+  { event:'耶穌復活',       period:'耶穌' },
+  { event:'五旬節聖靈降臨', period:'教會' },
+  { event:'新耶路撒冷降下', period:'新天新地' },
+];
+
+// ── STATE ─────────────────────────────────────────────────────
+let roomId = '', nickname = '';
+let sortItems = [];
+let selectedEvent = null, selectedPeriod = null;
+let matched = {}; // event -> period (correct ones)
+let finalChoice = null;
+
+// ── UTILS ─────────────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+// ── JOIN ──────────────────────────────────────────────────────
+window.onload = () => {
+  const p = new URLSearchParams(location.search);
+  if (p.get('room')) document.getElementById('inp-room').value = p.get('room').toUpperCase();
+};
+
+async function joinGame() {
+  const code = document.getElementById('inp-room').value.trim().toUpperCase();
+  const name = document.getElementById('inp-name').value.trim();
+  if (!code) return showErr('join-err','請輸入房號');
+  if (!name) return showErr('join-err','請輸入你的名字');
+
+  const { data, error } = await sb.from('story_rooms').select('id,status').eq('id', code).single();
+  if (error || !data) return showErr('join-err','找不到房間，請確認房號');
+  if (data.status === 'finished') return showErr('join-err','這場遊戲已結束');
+
+  roomId = code; nickname = name;
+  buildSort();
+  show('s-sort');
+}
+
+// ── SORT ──────────────────────────────────────────────────────
+function buildSort() {
+  // shuffle
+  sortItems = [...CORRECT_ORDER].sort(() => Math.random() - 0.5);
+  renderSort();
+}
+
+function renderSort() {
+  const list = document.getElementById('drag-list');
+  list.innerHTML = '';
+  sortItems.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'drag-item fade-up';
+    div.draggable = true;
+    div.dataset.idx = i;
+    div.innerHTML = `
+      <span class="drag-handle">⠿</span>
+      <span class="drag-num">${i+1}</span>
+      <span style="flex:1">${item}</span>`;
+    div.addEventListener('dragstart', onDragStart);
+    div.addEventListener('dragover',  onDragOver);
+    div.addEventListener('drop',      onDrop);
+    div.addEventListener('dragend',   onDragEnd);
+    // touch support
+    div.addEventListener('touchstart', onTouchStart, {passive:true});
+    div.addEventListener('touchmove',  onTouchMove,  {passive:false});
+    div.addEventListener('touchend',   onTouchEnd);
+    list.appendChild(div);
+  });
+}
+
+// Mouse drag
+let dragIdx = null;
+function onDragStart(e) { dragIdx = +this.dataset.idx; this.classList.add('dragging'); }
+function onDragOver(e)  { e.preventDefault(); document.querySelectorAll('.drag-item').forEach(d=>d.classList.remove('drag-over')); this.classList.add('drag-over'); }
+function onDrop(e)      { e.preventDefault(); const to = +this.dataset.idx; if (dragIdx !== null && dragIdx !== to) { const a=[...sortItems]; [a[dragIdx],a[to]]=[a[to],a[dragIdx]]; sortItems=a; renderSort(); } dragIdx=null; }
+function onDragEnd()    { document.querySelectorAll('.drag-item').forEach(d=>{d.classList.remove('dragging','drag-over')}); dragIdx=null; }
+
+// Touch drag
+let touchDragIdx=null, touchClone=null, touchOffX=0, touchOffY=0;
+function onTouchStart(e) {
+  touchDragIdx = +this.dataset.idx;
+  const t = e.touches[0];
+  const r = this.getBoundingClientRect();
+  touchOffX = t.clientX - r.left; touchOffY = t.clientY - r.top;
+  touchClone = this.cloneNode(true);
+  touchClone.style.cssText=`position:fixed;width:${r.width}px;opacity:0.85;pointer-events:none;z-index:999;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:14px 16px;display:flex;align-items:center;gap:12px;`;
+  touchClone.style.left=(t.clientX-touchOffX)+'px'; touchClone.style.top=(t.clientY-touchOffY)+'px';
+  document.body.appendChild(touchClone);
+}
+function onTouchMove(e) {
+  e.preventDefault();
+  const t = e.touches[0];
+  if (touchClone) { touchClone.style.left=(t.clientX-touchOffX)+'px'; touchClone.style.top=(t.clientY-touchOffY)+'px'; }
+  document.querySelectorAll('.drag-item').forEach(d=>d.classList.remove('drag-over'));
+  const el = document.elementFromPoint(t.clientX, t.clientY)?.closest('.drag-item');
+  if (el) el.classList.add('drag-over');
+}
+function onTouchEnd(e) {
+  if (touchClone) { touchClone.remove(); touchClone=null; }
+  const t = e.changedTouches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY)?.closest('.drag-item');
+  if (el) {
+    const to = +el.dataset.idx;
+    if (touchDragIdx !== null && touchDragIdx !== to) {
+      const a=[...sortItems]; [a[touchDragIdx],a[to]]=[a[to],a[touchDragIdx]]; sortItems=a; renderSort();
+    }
+  }
+  document.querySelectorAll('.drag-item').forEach(d=>d.classList.remove('drag-over'));
+  touchDragIdx=null;
+}
+
+function checkSort() {
+  const isCorrect = sortItems.every((item, i) => item === CORRECT_ORDER[i]);
+  const items = document.querySelectorAll('.drag-item');
+  const fb = document.getElementById('sort-feedback');
+
+  if (isCorrect) {
+    items.forEach(d => d.classList.add('correct'));
+    fb.innerHTML = `<div class="result-box result-ok">✅ 排列正確！時間軸順序是：${CORRECT_ORDER.join(' → ')}</div>`;
+    fb.style.display = 'block';
+    document.getElementById('btn-check-sort').style.display = 'none';
+    document.getElementById('btn-next-sort').style.display = 'block';
+  } else {
+    items.forEach((d,i) => {
+      d.classList.remove('correct','wrong');
+      if (sortItems[i] !== CORRECT_ORDER[i]) d.classList.add('wrong');
+    });
+    // 顯示正確答案
+    sortItems = [...CORRECT_ORDER];
+    setTimeout(() => {
+      renderSort();
+      document.querySelectorAll('.drag-item').forEach(d => d.classList.add('correct'));
+      fb.innerHTML = `<div class="result-box result-err">❌ 正確順序是：${CORRECT_ORDER.join(' → ')}</div>`;
+      fb.style.display = 'block';
+      document.getElementById('btn-check-sort').style.display = 'none';
+      document.getElementById('btn-next-sort').style.display = 'block';
+    }, 600);
+  }
+}
+
+// ── CONNECT ───────────────────────────────────────────────────
+function goToConnect() {
+  matched = {};
+  selectedEvent = null; selectedPeriod = null;
+  buildConnect();
+  show('s-connect');
+}
+
+function buildConnect() {
+  const evCol = document.getElementById('col-events');
+  const prCol = document.getElementById('col-periods');
+  evCol.innerHTML = ''; prCol.innerHTML = '';
+
+  // shuffle both columns independently
+  const evShuf  = [...CONNECT_PAIRS].sort(() => Math.random() - 0.5);
+  const prShuf  = [...CONNECT_PAIRS].map(p=>p.period).sort(() => Math.random() - 0.5);
+
+  evShuf.forEach(pair => {
+    const div = document.createElement('div');
+    div.className = 'connect-item';
+    div.dataset.event = pair.event;
+    div.textContent = pair.event;
+    div.onclick = () => selectEvent(div);
+    evCol.appendChild(div);
+  });
+
+  prShuf.forEach(period => {
+    const div = document.createElement('div');
+    div.className = 'connect-item';
+    div.dataset.period = period;
+    div.textContent = period;
+    div.onclick = () => selectPeriod(div);
+    prCol.appendChild(div);
+  });
+
+  updateConnectStatus();
+}
+
+function selectEvent(el) {
+  if (el.classList.contains('matched-ok') || el.classList.contains('matched-err')) return;
+  document.querySelectorAll('#col-events .connect-item').forEach(d=>d.classList.remove('selected'));
+  selectedEvent = el.dataset.event;
+  el.classList.add('selected');
+  tryMatch();
+}
+
+function selectPeriod(el) {
+  if (el.classList.contains('matched-ok') || el.classList.contains('matched-err')) return;
+  document.querySelectorAll('#col-periods .connect-item').forEach(d=>d.classList.remove('selected'));
+  selectedPeriod = el.dataset.period;
+  el.classList.add('selected');
+  tryMatch();
+}
+
+function tryMatch() {
+  if (!selectedEvent || !selectedPeriod) return;
+
+  const correctPeriod = CONNECT_PAIRS.find(p=>p.event===selectedEvent).period;
+  const isCorrect = selectedPeriod === correctPeriod;
+
+  const evEl = document.querySelector(`#col-events [data-event="${selectedEvent}"]`);
+  const prEl = document.querySelector(`#col-periods [data-period="${selectedPeriod}"]`);
+
+  evEl.classList.remove('selected');
+  prEl.classList.remove('selected');
+
+  if (isCorrect) {
+    evEl.classList.add('matched-ok');
+    prEl.classList.add('matched-ok');
+    matched[selectedEvent] = selectedPeriod;
+
+    // show feedback row
+    const row = document.createElement('div');
+    row.className = 'connect-line fade-up';
+    row.innerHTML = `<span style="color:#2d8a2d">✅</span><strong>${selectedEvent}</strong><span>→</span><strong>${selectedPeriod}</strong>`;
+    document.getElementById('connect-result').appendChild(row);
+  } else {
+    evEl.classList.add('matched-err');
+    prEl.classList.add('matched-err');
+
+    // show correct answer then reset
+    const row = document.createElement('div');
+    row.className = 'connect-line fade-up';
+    row.innerHTML = `<span style="color:var(--red)">❌</span><strong>${selectedEvent}</strong>→ 正確答案是：<strong>${correctPeriod}</strong>`;
+    document.getElementById('connect-result').appendChild(row);
+
+    setTimeout(() => {
+      evEl.classList.remove('matched-err');
+      prEl.classList.remove('matched-err');
+      // auto match correctly
+      evEl.classList.add('matched-ok');
+      const correctPrEl = document.querySelector(`#col-periods [data-period="${correctPeriod}"]`);
+      if (correctPrEl) correctPrEl.classList.add('matched-ok');
+      matched[selectedEvent] = correctPeriod;
+      checkAllMatched();
+    }, 1200);
+  }
+
+  selectedEvent = null; selectedPeriod = null;
+  updateConnectStatus();
+
+  if (isCorrect) checkAllMatched();
+}
+
+function checkAllMatched() {
+  if (Object.keys(matched).length === CONNECT_PAIRS.length) {
+    document.getElementById('btn-next-connect').style.display = 'block';
+    updateConnectStatus();
+  }
+}
+
+function updateConnectStatus() {
+  const done = Object.keys(matched).length;
+  const total = CONNECT_PAIRS.length;
+  document.getElementById('connect-status').textContent =
+    done === total ? '🎉 全部配對完成！' : `已配對 ${done} / ${total}`;
+}
+
+// ── FINAL ─────────────────────────────────────────────────────
+function goToFinal() { show('s-final'); }
+
+function selectFinal(key, el) {
+  finalChoice = key;
+  document.querySelectorAll('.end-choice').forEach(d=>d.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('btn-submit-final').disabled = false;
+}
+
+async function submitFinal() {
+  if (!finalChoice) return;
+  document.getElementById('btn-submit-final').disabled = true;
+  document.getElementById('btn-submit-final').textContent = '送出中…';
+
+  await sb.from('story_answers').insert({
+    room_id: roomId,
+    nickname: nickname,
+    q_final: finalChoice,
+  });
+
+  show('s-done');
+}
+</script>
+</body>
+</html>
